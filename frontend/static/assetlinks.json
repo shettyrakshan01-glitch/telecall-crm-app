@@ -2,7 +2,7 @@
       "relation": ["delegate_permission/common.handle_all_urls"],
       "target": {
         "namespace": "android_app",
-        "package_name": "com.onrender.telecall_crm.twa",
-        "sha256_cert_fingerprints": ["11:7D:CD:B0:2A:3D:BA:D6:A7:27:AE:7D:AC:52:0A:13:88:5B:DC:86:2B:DC:8A:15:F9:46:F0:31:5E:A3:E4:0F"]
+        "package_name": "com.onrender.telecall_crm_app.twa",
+        "sha256_cert_fingerprints": ["0A:D3:9B:B1:24:5F:BF:9A:D6:7C:7D:38:13:CA:C5:B8:0D:8B:20:D7:13:F1:37:ED:6A:78:56:B6:B8:64:76:35"]
       }
     }]
