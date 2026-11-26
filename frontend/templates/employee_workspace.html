@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Workspace - TeleCall CRM</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/static/js/lucide.min.js?v=1.2.4"></script>
+  <script src="/static/js/chart.min.js?v=1.2.4"></script>
+  <link rel="stylesheet" href="/static/css/style.css?v=1.2.4">
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="theme-color" content="#2563EB">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/static/sw.js').catch(() => {});
+      });
+    }
+  </script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#EFF6FF',
+              100: '#DBEAFE',
+              500: '#3B82F6',
+              600: '#2563EB',
+              700: '#1D4ED8',
+            },
+            navy: {
+              900: '#0F172A',
+              800: '#1E293B',
+              700: '#334155'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans overflow-x-hidden w-full max-w-full pb-20 lg:pb-0">
+
+  <!-- ================= TOP HEADER BAR ================= -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 transition-colors w-full max-w-full overflow-hidden">
+    <div class="px-2.5 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-1.5 sm:gap-4 max-w-full">
+      
+      <!-- Left: Brand Logo & Title -->
+      <div class="flex items-center space-x-2 shrink-0">
+        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 shrink-0">
+          <i data-lucide="headset" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+        </div>
+        <div class="shrink-0">
+          <div class="flex items-center space-x-1.5">
+            <span class="font-extrabold text-sm sm:text-lg text-slate-900 tracking-tight whitespace-nowrap">TeleCall<span class="text-blue-600"> CRM</span></span>
+            <span class="hidden sm:inline-block text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">AGENT</span>
+          </div>
+          <p id="emp-company-name" class="hidden sm:block text-xs text-slate-500 font-medium whitespace-nowrap">Apex Realty Global</p>
+        </div>
+      </div>
+
+      <!-- Right: Shift Counters, Status & Profile -->
+      <div class="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
+        
+        <!-- Live Shift Counters (Visible on large screens) -->
+        <div class="hidden 2xl:flex items-center space-x-2 text-xs shrink-0">
+          <div class="bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200 text-slate-700">
+            <span class="text-slate-400">Calls Today:</span>
+            <span id="shift-calls-count" class="font-bold text-slate-900 ml-1">0</span>
+          </div>
+          <div class="bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200 text-slate-700">
+            <span class="text-slate-400">Talk Time:</span>
+            <span id="shift-talk-time" class="font-mono font-bold text-blue-600 ml-1">00:00</span>
+          </div>
+        </div>
+
+        <!-- Telecaller Status Selector (Compact on mobile so it never overflows) -->
+        <div class="flex items-center shrink-0">
+          <select 
+            id="agent-presence-select" 
+            onchange="changePresenceStatus(this.value)"
+            class="px-2 py-1 rounded-full text-[11px] sm:text-xs font-bold border border-slate-200 bg-white text-slate-800 focus:outline-none cursor-pointer max-w-[85px] sm:max-w-none text-ellipsis"
+          >
+            <option value="idle">&#9679; Ready</option>
+            <option value="break">&#9679; Break</option>
+            <option value="offline">&#9679; Offline</option>
+          </select>
+        </div>
+
+        <!-- Android Call Mode: SIM Dial vs Cloud Bridge -->
+        <div class="hidden xl:flex items-center space-x-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-xs font-semibold shrink-0" title="Choose how calls are placed">
+          <i data-lucide="smartphone" class="w-3.5 h-3.5 text-blue-600"></i>
+          <select id="agent-call-mode" class="bg-transparent font-bold text-blue-900 focus:outline-none cursor-pointer">
+            <option value="sim">Phone SIM (Direct Native Call)</option>
+            <option value="cloud">Cloud Telephony (Auto-Bridge)</option>
+          </select>
+        </div>
+
+        <!-- Dark Mode Toggle -->
+        <button 
+          onclick="toggleDarkMode()" 
+          class="p-1.5 sm:p-2 rounded-full border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 transition shrink-0 cursor-pointer"
+          title="Toggle Light / Dark Theme"
+        >
+          <i id="theme-icon" data-lucide="moon" class="w-4 h-4"></i>
+        </button>
+
+        <!-- In-App Notification Bell -->
+        <div class="relative shrink-0">
+          <button 
+            onclick="toggleNotifDropdown()" 
+            class="p-1.5 sm:p-2 rounded-full border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 relative transition cursor-pointer"
+            title="In-App Notifications"
+          >
+            <i data-lucide="bell" class="w-4 h-4"></i>
+            <span id="nav-notif-badge" class="hidden absolute -top-1 -right-1 px-1.5 py-0.2 bg-rose-500 text-white text-[10px] font-bold rounded-full">0</span>
+          </button>
+
+          <div id="notif-dropdown-menu" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-200 z-50 overflow-hidden">
+            <div class="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+              <span class="font-bold text-xs text-slate-900">Notifications</span>
+              <button onclick="requestBrowserPushPermission()" class="text-[10px] text-blue-600 hover:underline">Enable Push</button>
+            </div>
+            <div id="notif-list-container" class="max-h-72 overflow-y-auto divide-y divide-slate-100 p-2 text-xs">
+              <div class="p-4 text-center text-slate-400">No new notifications</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hidden sm:block h-6 w-px bg-slate-200 shrink-0"></div>
+
+        <!-- Logged-in Agent Chip -->
+        <div onclick="if(window.innerWidth < 1024) toggleMobileSidebar();" class="flex items-center space-x-1 sm:space-x-2 px-1.5 sm:px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 shrink-0 cursor-pointer lg:cursor-default">
+          <div id="emp-avatar-initials" class="w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center shrink-0">
+            AG
+          </div>
+          <div class="text-left hidden md:block">
+            <div id="emp-user-name" class="text-xs font-bold text-slate-900 leading-tight">Telecaller</div>
+            <div class="text-[10px] font-bold text-blue-600 uppercase">AGENT</div>
+          </div>
+        </div>
+
+        <!-- Log Out Button (Desktop Header Only) -->
+        <button 
+          onclick="handleLogout()" 
+          class="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-full border border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition shrink-0 cursor-pointer shadow-sm"
+          title="Log Out of CRM"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-rose-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          <span>Log Out</span>
+        </button>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN LAYOUT WITH SIDEBAR ================= -->
+  <div class="flex-1 flex lg:overflow-hidden relative">
+
+    <!-- MOBILE BACKDROP OVERLAY -->
+    <div id="mobile-sidebar-backdrop" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-[55] hidden lg:hidden transition-opacity"></div>
+
+    <!-- LEFT SIDEBAR (Dark Navy #0F172A) - Mobile Drawer + Desktop Fixed -->
+    <aside id="sidebar-aside" class="fixed inset-y-0 left-0 z-[60] w-72 bg-navy-900 text-slate-300 flex flex-col justify-between select-none transform -translate-x-full transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:w-64 lg:z-auto shrink-0 shadow-2xl lg:shadow-none">
+      
+      <!-- Menu Items -->
+      <div class="p-4 overflow-y-auto">
+        <div class="flex items-center justify-between px-3 mb-3">
+          <span class="text-[11px] font-bold tracking-wider text-slate-400 uppercase">AGENT MENU</span>
+          <button onclick="toggleMobileSidebar()" class="lg:hidden p-1 text-slate-400 hover:text-white rounded-lg focus:outline-none cursor-pointer">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+        
+        <nav class="space-y-1.5 text-sm font-medium">
+          
+          <!-- Agent Dashboard -->
+          <a href="#dashboard" onclick="switchAgentTab('dashboard')" id="agent-tab-dashboard" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition bg-blue-600 text-white font-semibold shadow-sm">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+              <span>Dashboard</span>
+            </div>
+          </a>
+
+          <!-- My Leads -->
+          <a href="#leads" onclick="switchAgentTab('leads')" id="agent-tab-leads" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition hover:bg-navy-800 text-slate-300">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="contact" class="w-4 h-4"></i>
+              <span>My Leads</span>
+            </div>
+            <span id="agent-leads-count" class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-navy-800 text-slate-300">0</span>
+          </a>
+
+          <!-- Follow-ups Due -->
+          <a href="#followups" onclick="switchAgentTab('followups')" id="agent-tab-followups" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition hover:bg-navy-800 text-slate-300">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="calendar-clock" class="w-4 h-4"></i>
+              <span>Follow-ups</span>
+            </div>
+            <span id="agent-fup-count" class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-500/20 text-amber-300">0</span>
+          </a>
+
+          <!-- Dedicated Dialer Page -->
+          <a href="#dialer" onclick="switchAgentTab('dialer')" id="agent-tab-dialer" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition hover:bg-navy-800 text-slate-300">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="phone" class="w-4 h-4"></i>
+              <span>Dialer</span>
+            </div>
+            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-500/20 text-blue-300">KEYPAD</span>
+          </a>
+
+          <!-- Recent Calls -->
+          <a href="#history" onclick="switchAgentTab('history')" id="agent-tab-history" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition hover:bg-navy-800 text-slate-300">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="phone-call" class="w-4 h-4"></i>
+              <span>Recent Calls</span>
+            </div>
+          </a>
+
+        </nav>
+      </div>
+
+      <!-- Bottom: Version & Sidebar Logout -->
+      <div class="p-3 pb-20 lg:pb-3 border-t border-navy-800 space-y-2 shrink-0">
+        <div class="flex items-center justify-between text-[11px] text-slate-400">
+          <span class="font-mono">Version 1.0.0</span>
+          <span class="text-slate-400">Agent Mode</span>
+        </div>
+        <button 
+          onclick="handleLogout()" 
+          class="w-full flex items-center justify-center space-x-2 px-3 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 hover:text-rose-100 text-xs font-semibold transition cursor-pointer"
+          title="Log Out of CRM"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          <span>Log Out</span>
+        </button>
+      </div>
+
+    </aside>
+
+    <!-- MAIN AGENT CONTENT AREA -->
+    <main class="flex-1 w-full min-w-0 lg:overflow-y-auto overflow-x-hidden p-3 sm:p-6 pb-28 lg:pb-8 bg-slate-50 transition-colors">
+      
+      <!-- ================= AGENT TAB 1: DASHBOARD (Home Screen) ================= -->
+      <section id="agent-sec-dashboard" class="space-y-6">
+        
+        <!-- Native Mobile Agent Greeting (Mobile Only) -->
+        <div class="lg:hidden flex items-center justify-between p-3.5 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl text-white shadow-md shadow-blue-500/20 mb-3">
+          <div>
+            <span class="text-[11px] text-blue-100 font-medium">Hello Telecaller 👋</span>
+            <h2 id="mobile-emp-greeting" class="text-base font-extrabold tracking-tight leading-tight">Calling Workspace</h2>
+          </div>
+          <div class="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm border border-white/20 text-[11px] font-bold">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>Shift Active</span>
+          </div>
+        </div>
+
+        
+        <!-- Top Row: 6 Stat Cards (2 Cols on Mobile, 6 on Desktop) -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-4">
+          
+          <div class="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between hover:shadow-md transition">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Calls</span>
+              <div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <i data-lucide="phone-outgoing" class="w-3.5 h-3.5"></i>
+              </div>
+            </div>
+            <h4 id="agent-stat-total" class="text-2xl font-black text-slate-900 tracking-tight">0</h4>
+            <span class="text-[10px] text-slate-400 font-medium mt-1">Logged today</span>
+          </div>
+
+          <div class="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between hover:shadow-md transition">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Connected</span>
+              <div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+              </div>
+            </div>
+            <h4 id="agent-stat-conn" class="text-2xl font-black text-emerald-600 tracking-tight">0</h4>
+            <span class="text-[10px] text-emerald-600 font-bold mt-1">Spoke to lead</span>
+          </div>
+
+          <div class="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between hover:shadow-md transition">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Missed / Busy</span>
+              <div class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                <i data-lucide="phone-missed" class="w-3.5 h-3.5"></i>
+              </div>
+            </div>
+            <h4 id="agent-stat-miss" class="text-2xl font-black text-rose-600 tracking-tight">0</h4>
+            <span class="text-[10px] text-slate-400 font-medium mt-1">No answer / busy</span>
+          </div>
+
+          <div class="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between hover:shadow-md transition">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Talk Time</span>
+              <div class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+              </div>
+            </div>
+            <h4 id="agent-stat-talk" class="text-2xl font-black text-blue-600 tracking-tight font-mono">00:00</h4>
+            <span class="text-[10px] text-slate-400 font-medium mt-1">Total duration</span>
+          </div>
+
+          <div class="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between hover:shadow-md transition">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Follow-ups</span>
+              <div class="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <i data-lucide="calendar-clock" class="w-3.5 h-3.5"></i>
+              </div>
+            </div>
+            <h4 id="agent-stat-fup" class="text-2xl font-black text-amber-600 tracking-tight">0</h4>
+            <span class="text-[10px] text-amber-600 font-bold mt-1">Due today</span>
+          </div>
+
+          <div class="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200/90 shadow-sm flex flex-col justify-between hover:shadow-md transition">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Conversions</span>
+              <div class="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                <i data-lucide="award" class="w-3.5 h-3.5"></i>
+              </div>
+            </div>
+            <h4 id="agent-stat-conv" class="text-2xl font-black text-purple-600 tracking-tight">0</h4>
+            <span class="text-[10px] text-purple-600 font-bold mt-1">Deals closed</span>
+          </div>
+
+        </div>
+
+        
+        <!-- Mobile Native Quick Action Tiles (Matching Admin Portal Layout) -->
+        <div class="grid grid-cols-4 gap-2 lg:hidden">
+          <button onclick="switchAgentTab('dialer')" class="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white border border-slate-200/80 shadow-sm active:scale-95 transition cursor-pointer">
+            <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-1">
+              <i data-lucide="phone-call" class="w-4 h-4"></i>
+            </div>
+            <span class="text-[10px] font-bold text-slate-700">Dialer</span>
+          </button>
+          <button onclick="switchAgentTab('leads')" class="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white border border-slate-200/80 shadow-sm active:scale-95 transition cursor-pointer">
+            <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-1">
+              <i data-lucide="contact" class="w-4 h-4"></i>
+            </div>
+            <span class="text-[10px] font-bold text-slate-700">My Leads</span>
+          </button>
+          <button onclick="switchAgentTab('followups')" class="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white border border-slate-200/80 shadow-sm active:scale-95 transition cursor-pointer">
+            <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-1">
+              <i data-lucide="calendar" class="w-4 h-4"></i>
+            </div>
+            <span class="text-[10px] font-bold text-slate-700">Callbacks</span>
+          </button>
+          <button onclick="switchAgentTab('history')" class="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white border border-slate-200/80 shadow-sm active:scale-95 transition cursor-pointer">
+            <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-1">
+              <i data-lucide="history" class="w-4 h-4"></i>
+            </div>
+            <span class="text-[10px] font-bold text-slate-700">Logs</span>
+          </button>
+        </div>
+
+
+        <!-- Chart & Follow-up Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <!-- Weekly Chart -->
+          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 mb-3">7-Day Call Activity</h4>
+            <div class="relative w-full h-56">
+              <canvas id="agentWeeklyChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Today's Follow-up List with 1-Click Call -->
+          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Today's Scheduled Callbacks</h4>
+                <button onclick="switchAgentTab('followups')" class="text-xs text-blue-600 font-semibold hover:underline">View All</button>
+              </div>
+              <div id="agent-today-fup-container" class="space-y-2 max-h-52 overflow-y-auto">
+                <div class="text-center py-8 text-slate-400 text-xs">No pending follow-ups for today.</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Recent Calls Table -->
+        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-3">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Recent Call Logs & Recordings</h4>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-500 uppercase font-semibold border-y border-slate-200">
+                <tr>
+                  <th class="py-2.5 px-3">Time</th>
+                  <th class="py-2.5 px-3">Lead Name</th>
+                  <th class="py-2.5 px-3">Phone</th>
+                  <th class="py-2.5 px-3">Duration</th>
+                  <th class="py-2.5 px-3">Disposition</th>
+                  <th class="py-2.5 px-3">Recording</th>
+                </tr>
+              </thead>
+              <tbody id="agent-recent-calls-tbody" class="divide-y divide-slate-100 font-medium text-slate-700">
+                <tr><td colspan="6" class="text-center py-6 text-slate-400">Loading recent calls...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ================= AGENT TAB 2: MY LEADS ================= -->
+      <section id="agent-sec-leads" class="hidden space-y-4 sm:space-y-6">
+        <div class="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h4 class="text-base font-bold text-slate-900">My Assigned Leads</h4>
+              <p class="text-xs text-slate-500">Leads assigned to you for calling and follow-ups</p>
+            </div>
+            <div class="relative w-full sm:w-64">
+              <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400"></i>
+              <input type="text" id="agent-lead-search" onkeyup="filterAgentLeads()" placeholder="Search leads by name or phone..." class="w-full text-xs pl-8 pr-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none">
+            </div>
+          </div>
+
+          <!-- Mobile Native Leads Card List (1-Tap SIM Call) -->
+          <div id="agent-leads-mobile-list" class="block md:hidden space-y-2.5">
+            <div class="text-center py-8 text-slate-400 text-xs">Loading assigned leads...</div>
+          </div>
+
+          <!-- Desktop Leads Table -->
+          <div class="hidden md:block overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-500 uppercase font-semibold border-y border-slate-200">
+                <tr>
+                  <th class="py-3 px-4">Name</th>
+                  <th class="py-3 px-4">Phone</th>
+                  <th class="py-3 px-4">City</th>
+                  <th class="py-3 px-4">Stage</th>
+                  <th class="py-3 px-4">Total Calls</th>
+                  <th class="py-3 px-4 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody id="agent-leads-tbody" class="divide-y divide-slate-100 font-medium text-slate-700">
+                <tr><td colspan="6" class="text-center py-6 text-slate-400">Loading assigned leads...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= AGENT TAB 3: FOLLOW-UPS ================= -->
+      <section id="agent-sec-followups" class="hidden space-y-4 sm:space-y-6">
+        <div class="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h4 class="text-base font-bold text-slate-900">Follow-up Callbacks</h4>
+              <p class="text-xs text-slate-500">Scheduled customer follow-up calls</p>
+            </div>
+          </div>
+
+          <!-- Mobile Native Follow-ups Card List -->
+          <div id="agent-followups-mobile-list" class="block md:hidden space-y-2.5">
+            <div class="text-center py-8 text-slate-400 text-xs">Loading follow-ups...</div>
+          </div>
+
+          <!-- Desktop Follow-ups Table -->
+          <div class="hidden md:block overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-500 uppercase font-semibold border-y border-slate-200">
+                <tr>
+                  <th class="py-3 px-4">Scheduled For</th>
+                  <th class="py-3 px-4">Customer Name</th>
+                  <th class="py-3 px-4">Phone</th>
+                  <th class="py-3 px-4">Notes</th>
+                  <th class="py-3 px-4 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody id="agent-full-fup-tbody" class="divide-y divide-slate-100 font-medium text-slate-700">
+                <tr><td colspan="5" class="text-center py-6 text-slate-400">Loading follow-ups...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= AGENT TAB 4: DEDICATED DIALER ================= -->
+      <section id="agent-sec-dialer" class="hidden min-h-[calc(100vh-10rem)] pb-28 space-y-3">
+
+        <!-- Next Lead In Queue (Hero Calling Action Card) -->
+        <div id="hero-next-lead-card" class="max-w-md mx-auto bg-gradient-to-br from-slate-900 to-navy-900 text-white rounded-3xl p-4 shadow-xl border border-slate-800 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+              ⚡ Next Up to Call
+            </span>
+            <span id="hero-next-stage" class="text-[10px] text-slate-400 font-bold">New Lead</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 id="hero-next-name" class="text-lg font-black text-white tracking-tight">Rohan Kapoor</h3>
+              <p id="hero-next-phone" class="text-xs text-slate-400 font-mono mt-0.5">+91 98333 44455 &bull; Delhi NCR</p>
+            </div>
+            <button type="button" id="hero-next-call-btn" onclick="triggerHeroCall(event)" class="w-12 h-12 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black shadow-lg shadow-emerald-500/30 flex items-center justify-center active:scale-95 transition shrink-0 ml-3 cursor-pointer" title="Call Customer (In-CRM)">
+              <i data-lucide="phone-call" class="w-6 h-6 stroke-[2.5]"></i>
+            </button>
+          </div>
+          <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+            <span class="text-emerald-400 font-semibold flex items-center space-x-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Direct SIM + CRM Call Active</span>
+            </span>
+            <button onclick="skipHeroLead()" class="text-blue-400 hover:text-blue-300 font-bold text-xs cursor-pointer">
+              Skip Lead &rarr;
+            </button>
+          </div>
+        </div>
+
+
+        <!-- Top Mode Switcher (Keypad vs Auto-Dialer Queue) -->
+        <div class="max-w-md mx-auto mb-4 flex items-center p-1 bg-slate-200/80 rounded-2xl">
+          <button onclick="toggleDialerSubView('keypad')" id="subview-btn-keypad" class="flex-1 py-2 text-xs font-bold rounded-xl bg-white text-slate-900 shadow-sm transition">
+            <i data-lucide="hash" class="w-3.5 h-3.5 inline mr-1"></i>
+            Keypad Dialer
+          </button>
+          <button onclick="toggleDialerSubView('autodialer')" id="subview-btn-autodialer" class="flex-1 py-2 text-xs font-bold rounded-xl text-slate-600 hover:text-slate-900 transition">
+            <i data-lucide="play-circle" class="w-3.5 h-3.5 inline mr-1"></i>
+            Auto-Queue Campaign
+          </button>
+        </div>
+
+        <!-- VIEW 1: MANUAL SMART KEYPAD (Full-Screen Native Experience) -->
+        <div id="dialer-view-keypad" class="max-w-sm mx-auto flex flex-col items-center justify-between space-y-2.5">
+          
+          <!-- Number Display Box -->
+          <div class="w-full text-center py-2.5 px-4 bg-white rounded-3xl border border-slate-200 shadow-sm">
+            <input 
+              type="tel" 
+              id="agent-keypad-phone" 
+              oninput="syncKeypadDialHref(); lookupKeypadContact();" 
+              placeholder="Enter number..." 
+              class="w-full text-center text-2xl sm:text-3xl font-mono font-black tracking-wider text-slate-900 bg-transparent focus:outline-none"
+            >
+            <div id="dialer-matched-contact" class="text-xs font-bold text-blue-600 h-4 mt-0.5 truncate">
+              <!-- Matched lead name appears here -->
+            </div>
+          </div>
+
+          <!-- Circular Keypad Grid (Native Phone Style) -->
+          <div class="grid grid-cols-3 gap-2.5 w-full max-w-[260px] justify-items-center">
+            <button onclick="agentPressKey('1')" class="w-16 h-16 sm:w-18 sm:h-18 rounded-full bg-white dark:bg-navy-800 hover:bg-slate-50 border border-slate-200 dark:border-navy-700 font-black text-2xl text-slate-900 shadow-sm active:scale-90 active:bg-slate-100 transition flex flex-col items-center justify-center cursor-pointer">
+              <span>1</span>
+              <span class="text-[9px] text-slate-400 font-normal -mt-1">&nbsp;</span>
+            </button>
+            <button onclick="agentPressKey('2')" class="w-16 h-16 sm:w-18 sm:h-18 rounded-full bg-white dark:bg-navy-800 hover:bg-slate-50 border border-slate-200 dark:border-navy-700 font-black text-2xl text-slate-900 shadow-sm active:scale-90 active:bg-slate-100 transition flex flex-col items-center justify-center cursor-pointer">
+              <span>2</span>
+              <span class="text-[9px] text-slate-400 font-bold -mt-1">ABC</span>
+            </button>
+            <button onclick="agentPressKey('3')" class="w-16 h-16 sm:w-18 sm:h-18 rounded-full bg-white dark:bg-navy-800 hover:bg-slate-50 border border-slate-200 dark:border-navy-700 font-black text-2xl text-slate-900 shadow-sm active:scale-90 active:bg-slate-100 transition flex flex-col items-center justify-center cursor-pointer">
+              <span>3</span>
+              <span class="text-[9px] text-slate-400 font-bold -mt-1">DEF</span>
+            </button>
+            <button onclick="agentPressKey('4')" class="w-16 h-16 sm:w-18 sm:h-18 rounded-full bg-white dark:bg-navy-800 hover:bg-slate-50 border border-slate-200 dark:border-navy-700 font-black text-2xl text-slate-900 shadow-sm active:scale-90 active:bg-slate-100 transition flex flex-col items-center justify-center cursor-pointer">
+              <span>4</span>
+              <span class="text-[9px] text-slate-400 font-bold -mt-1">GHI</span>
+            </button>
+            <button onclick="agentPressKey('5')" class="w-16 h-16 sm:w-18 sm:h-18 rounded-full bg-white dark:bg-navy-800 hover:bg-slate-50 border border-slate-200 dark:border-navy-700 font-black text-2xl text-slate-900 shadow-sm active:scale-90 active:bg-slate-100 transition flex flex-col items-center justify-center cursor-pointer">
+              <span>5</span>
+              <span class="text-[9px] text-slate-400 font-bold -mt-1">JKL</span>
+            </button>
+            <button onclick="agentPressKey('6')" class="w-16 h-16 sm:w-18 sm:h-18 rounded-full bg-white dark:bg-navy-800 hover:bg-slate-50 border border-slate-200 dark:border-navy-700 font-black text-2xl text-slate-900 shadow-sm active:scale-90 active:bg-slate-100 transition flex flex-col items-center justify-center cursor-pointer">
+              <span>6</span>
+              <span class="text-[9px] text-slate-400 font-bold -mt-1">MNO</span>
+            </button>
+            <button onclick="agentPressKey('7')" class="w-16 h-16 sm:w-18 sm:h-18 rounded-full bg-white dark:bg-navy-800 hover:bg-slate-50 border border-slate-200 dark:border-navy-700 font-black text-2xl text-slate-900 shadow-sm active:scale-90 active:bg-slate-100 transition flex flex-col items-center justify-center cursor-pointer">
+              <span>7</span>
+              <span class="text-[9px] text-slate-400 font-bold -mt-1">PQRS</span>
+            </button>
+            <button onclick="agentPressKey('8')" class="w-16 h-16 sm:w-18 sm:h-18 rounded-full bg-white dark:bg-navy-800 hover:bg-slate-50 border border-slate-200 dark:border-navy-700 font-black text-2xl text-slate-900 shadow-sm active:scale-90 active:bg-slate-100 transition flex flex-col items-center justify-center cursor-pointer">
+              <span>8</span>
+              <span class="text-[9px] text-slate-400 font-bold -mt-1">TUV</span>
+            </button>
+            <button onclick="agentPressKey('9')" class="w-16 h-16 sm:w-18 sm:h-18 rounded-full bg-white dark:bg-navy-800 hover:bg-slate-50 border border-slate-200 dark:border-navy-700 font-black text-2xl text-slate-900 shadow-sm active:scale-90 active:bg-slate-100 transition flex flex-col items-center justify-center cursor-pointer">
+              <span>9</span>
+              <span class="text-[9px] text-slate-400 font-bold -mt-1">WXYZ</span>
+            </button>
+            <button onclick="agentPressKey('*')" class="w-16 h-16 sm:w-18 sm:h-18 rounded-full bg-white dark:bg-navy-800 hover:bg-slate-50 border border-slate-200 dark:border-navy-700 font-black text-2xl text-slate-900 shadow-sm active:scale-90 active:bg-slate-100 transition flex flex-col items-center justify-center cursor-pointer">
+              <span>*</span>
+              <span class="text-[9px] text-slate-400 font-normal -mt-1">&nbsp;</span>
+            </button>
+            <button onclick="agentPressKey('0')" class="w-16 h-16 sm:w-18 sm:h-18 rounded-full bg-white dark:bg-navy-800 hover:bg-slate-50 border border-slate-200 dark:border-navy-700 font-black text-2xl text-slate-900 shadow-sm active:scale-90 active:bg-slate-100 transition flex flex-col items-center justify-center cursor-pointer">
+              <span>0</span>
+              <span class="text-[9px] text-slate-400 font-bold -mt-1">+</span>
+            </button>
+            <button onclick="agentPressKey('#')" class="w-16 h-16 sm:w-18 sm:h-18 rounded-full bg-white dark:bg-navy-800 hover:bg-slate-50 border border-slate-200 dark:border-navy-700 font-black text-2xl text-slate-900 shadow-sm active:scale-90 active:bg-slate-100 transition flex flex-col items-center justify-center cursor-pointer">
+              <span>#</span>
+              <span class="text-[9px] text-slate-400 font-normal -mt-1">&nbsp;</span>
+            </button>
+          </div>
+
+          <!-- Bottom Action Buttons: Clear, Big Circular Green Call, Backspace -->
+          <div class="flex items-center justify-around w-full max-w-[280px] pt-3">
+            <button type="button" onclick="document.getElementById('agent-keypad-phone').value=''; lookupKeypadContact();" class="w-13 h-13 rounded-full bg-slate-100 dark:bg-navy-800 text-slate-400 hover:text-rose-500 flex items-center justify-center active:scale-90 transition cursor-pointer shadow-sm" title="Clear">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            
+            <!-- Big Circular Green Call Button (In-CRM) -->
+            <button 
+              type="button"
+              id="agent-keypad-dial-btn" 
+              onclick="agentKeypadDial(event)" 
+              class="w-16 h-16 rounded-full bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white shadow-2xl shadow-emerald-500/50 flex items-center justify-center transition cursor-pointer"
+              title="Call Phone (In-CRM)"
+            >
+              <i data-lucide="phone" class="w-7 h-7 fill-white"></i>
+            </button>
+
+            <button type="button" onclick="agentBackspaceKey()" class="w-13 h-13 rounded-full bg-slate-100 dark:bg-navy-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 flex items-center justify-center active:scale-90 transition cursor-pointer shadow-sm" title="Backspace">
+              <i data-lucide="delete" class="w-5 h-5"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- VIEW 2: AUTO-DIALER CAMPAIGN MODE (Embedded cleanly) -->
+        <div id="dialer-view-autodialer" class="hidden max-w-xl mx-auto bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-5">
+          <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div>
+              <h4 class="text-base font-bold text-slate-900">Auto-Dialer Campaign Mode</h4>
+              <p class="text-xs text-slate-500">Fast sequential dialing through assigned leads</p>
+            </div>
+            <span id="agent-ad-pill" class="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-600">Inactive</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Dialer Mode</label>
+              <select id="agent-ad-mode" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 font-medium">
+                <option value="preview">Preview Mode (Click to call)</option>
+                <option value="progressive">Progressive Mode (Auto countdown)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Countdown Delay (sec)</label>
+              <input type="number" id="agent-ad-delay" value="8" min="3" max="30" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 font-mono">
+            </div>
+          </div>
+
+          <div class="flex items-center space-x-3 pt-2">
+            <button onclick="startAgentAutoDialer()" id="agent-btn-ad-start" class="btn-primary-glow px-5 py-2.5 text-xs font-bold flex items-center space-x-2">
+              <i data-lucide="play" class="w-4 h-4"></i>
+              <span>Start Session</span>
+            </button>
+            <button onclick="pauseAgentAutoDialer()" id="agent-btn-ad-pause" class="hidden px-4 py-2.5 rounded-xl border border-amber-200 bg-amber-50 text-amber-700 text-xs font-bold">
+              Pause
+            </button>
+            <button onclick="skipAgentAutoDialerLead()" id="agent-btn-ad-skip" class="hidden px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 text-xs font-bold">
+              Skip
+            </button>
+            <button onclick="stopAgentAutoDialer()" id="agent-btn-ad-stop" class="hidden px-4 py-2.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-bold">
+              Stop
+            </button>
+          </div>
+
+          <div id="agent-ad-queue-box" class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+            <div class="flex justify-between text-slate-500 font-semibold">
+              <span>Queue:</span>
+              <span id="agent-ad-progress-text">0 / 0 Leads</span>
+            </div>
+            <div class="w-full bg-slate-200 rounded-full h-2">
+              <div id="agent-ad-progress-bar" class="bg-blue-600 h-2 rounded-full transition-all" style="width: 0%"></div>
+            </div>
+            <p id="agent-ad-current-lead-text" class="text-slate-600 font-medium pt-1">No active campaign.</p>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ================= AGENT TAB 5: HISTORY ================= -->
+      <section id="agent-sec-history" class="hidden space-y-4 sm:space-y-6">
+        <div class="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h4 class="text-base font-bold text-slate-900">Call Log History</h4>
+              <p class="text-xs text-slate-500">All outbound calls, talk durations & recordings</p>
+            </div>
+          </div>
+
+          <!-- Mobile Native History Card List -->
+          <div id="agent-history-mobile-list" class="block md:hidden space-y-2.5">
+            <div class="text-center py-8 text-slate-400 text-xs">Loading call history...</div>
+          </div>
+
+          <!-- Desktop History Table -->
+          <div class="hidden md:block overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-500 uppercase font-semibold border-y border-slate-200">
+                <tr>
+                  <th class="py-3 px-4">Date / Time</th>
+                  <th class="py-3 px-4">Customer Name</th>
+                  <th class="py-3 px-4">Phone</th>
+                  <th class="py-3 px-4">Duration</th>
+                  <th class="py-3 px-4">Disposition</th>
+                  <th class="py-3 px-4">Recording</th>
+                </tr>
+              </thead>
+              <tbody id="agent-full-history-tbody" class="divide-y divide-slate-100 font-medium text-slate-700">
+                <tr><td colspan="6" class="text-center py-6 text-slate-400">Loading call history...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ================= FLOATING DIALER WIDGET ================= -->
+  <!-- ================= ANDROID MOBILE BOTTOM NAVIGATION BAR ================= -->
+  <nav class="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-white dark:bg-navy-900 border-t border-slate-200/80 dark:border-navy-800 flex items-center justify-around h-16 px-1 text-slate-400 select-none shadow-2xl">
+    <button id="agent-bottom-dashboard" onclick="switchAgentTab('dashboard')" class="flex flex-col items-center justify-center p-1 text-blue-600 font-bold active:scale-90 transition">
+      <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+      <span class="text-[10px] mt-0.5">Home</span>
+    </button>
+    <button id="agent-bottom-leads" onclick="switchAgentTab('leads')" class="flex flex-col items-center justify-center p-1 text-slate-400 hover:text-blue-600 active:scale-90 transition">
+      <i data-lucide="contact" class="w-5 h-5"></i>
+      <span class="text-[10px] mt-0.5">Leads</span>
+    </button>
+    <button id="agent-bottom-dialer" onclick="switchAgentTab('dialer')" class="flex flex-col items-center justify-center p-1 active:scale-90 transition -mt-5">
+      <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-xl shadow-blue-500/50 border-4 border-slate-50 dark:border-navy-900">
+        <i data-lucide="phone" class="w-5 h-5"></i>
+      </div>
+      <span class="text-[10px] font-bold text-blue-600">Dialer</span>
+    </button>
+    <button id="agent-bottom-followups" onclick="switchAgentTab('followups')" class="flex flex-col items-center justify-center p-1 text-slate-400 hover:text-blue-600 active:scale-90 transition">
+      <i data-lucide="calendar-clock" class="w-5 h-5"></i>
+      <span class="text-[10px] mt-0.5">Callbacks</span>
+    </button>
+    <button id="agent-bottom-history" onclick="switchAgentTab('history')" class="flex flex-col items-center justify-center p-1 text-slate-400 hover:text-blue-600 active:scale-90 transition">
+      <i data-lucide="phone-call" class="w-5 h-5"></i>
+      <span class="text-[10px] mt-0.5">Logs</span>
+    </button>
+  </nav>
+
+  <!-- Mandatory Scripts -->
+  <script src="/static/js/app.js?v=1.2.4"></script>
+  <script src="/static/js/employee.js?v=1.2.4"></script>
+  <script>
+    if (window.safeCreateIcons) { window.safeCreateIcons(); } else if (window.lucide) { lucide.createIcons(); }
+  </script>
+</body>
+</html>

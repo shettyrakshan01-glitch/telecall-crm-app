@@ -1,0 +1,229 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --primary-blue: #2563EB;
+  --primary-hover: #1D4ED8;
+  --navy-sidebar: #0F172A;
+  --navy-sidebar-hover: #1E293B;
+  --navy-sidebar-active: #2563EB;
+}
+
+* {
+  font-family: var(--font-sans);
+}
+
+body {
+  background-color: #F8FAFC;
+  color: #0F172A;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Dark Mode Styles */
+html.dark body {
+  background-color: #0B0F19;
+  color: #F1F5F9;
+}
+
+html.dark .bg-white {
+  background-color: #111827 !important;
+}
+
+html.dark .bg-slate-50 {
+  background-color: #0F172A !important;
+}
+
+html.dark .border-slate-200 {
+  border-color: #1F2937 !important;
+}
+
+html.dark .border-slate-100 {
+  border-color: #1F2937 !important;
+}
+
+html.dark .text-slate-900 {
+  color: #F9FAFB !important;
+}
+
+html.dark .text-slate-800 {
+  color: #F3F4F6 !important;
+}
+
+html.dark .text-slate-700 {
+  color: #E5E7EB !important;
+}
+
+html.dark .text-slate-600 {
+  color: #9CA3AF !important;
+}
+
+html.dark .bg-slate-100 {
+  background-color: #1F2937 !important;
+}
+
+html.dark input, html.dark select, html.dark textarea {
+  background-color: #1F2937 !important;
+  color: #F9FAFB !important;
+  border-color: #374151 !important;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Primary Pill Button with Hover Glow */
+.btn-primary-glow {
+  background-color: #2563EB;
+  color: #FFFFFF;
+  border-radius: 9999px;
+  box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.35);
+  transition: all 0.2s ease;
+}
+.btn-primary-glow:hover {
+  background-color: #1D4ED8;
+  box-shadow: 0 6px 20px 0 rgba(37, 99, 235, 0.45);
+  transform: translateY(-1px);
+}
+
+/* Floating Dialer Button */
+.floating-dialer-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 50;
+  width: 56px;
+  height: 56px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.5), 0 8px 10px -6px rgba(37, 99, 235, 0.3);
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.floating-dialer-btn:hover {
+  transform: scale(1.08) translateY(-2px);
+  box-shadow: 0 14px 30px -5px rgba(37, 99, 235, 0.65);
+}
+
+/* Call Pulse Effect */
+@keyframes callRingPulse {
+  0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.6); }
+  70% { box-shadow: 0 0 0 18px rgba(37, 99, 235, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+}
+.animate-call-ringing {
+  animation: callRingPulse 1.6s infinite;
+}
+
+/* Clean Audio Player */
+audio {
+  height: 32px;
+  border-radius: 8px;
+  outline: none;
+}
+
+
+@media (max-width: 1023px) {
+  .floating-dialer-btn {
+    display: none !important;
+  }
+}
+
+
+/* True Native Mobile App Feeling */
+@media (max-width: 768px) {
+  body {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+  .mobile-tap {
+    touch-action: manipulation;
+  }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Mobile Viewport & Touch Lock */
+html, body {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+  width: 100% !important;
+}
+
+@media (max-width: 1023px) {
+  body {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+}
+
+/* Strict Mobile Workspace Responsive Guard */
+@media (max-width: 1279px) {
+  #workspace-info-pane {
+    display: none !important;
+  }
+}
+
+/* Suppress any AppsGeyser promo / ad widgets */
+[id*="appsgeyser"], [class*="appsgeyser"], [id*="download_app"], [class*="download_app"], .tt_download_bar_background {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  pointer-events: none !important;
+}
+
+
+/* ================= MOBILE WORKSPACE SINGLE COLUMN ENFORCEMENT ================= */
+@media (max-width: 1023px) {
+  #content-workspace {
+    flex-direction: column !important;
+  }
+  #workspace-list-pane {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  #workspace-detail-pane {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  #workspace-info-pane {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}
+
+/* Aggressive suppression of AppsGeyser ad widgets & Download the App promotional bars */
+[id*="appsgeyser"], [class*="appsgeyser"], [id*="download_app"], [class*="download_app"], 
+.tt_download_bar_background, .action_bar_download, [id*="action_bar"] {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  pointer-events: none !important;
+}

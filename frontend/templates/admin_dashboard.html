@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - TeleCall CRM</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/static/js/lucide.min.js?v=1.2.4"></script>
+  <script src="/static/js/chart.min.js?v=1.2.4"></script>
+  <link rel="stylesheet" href="/static/css/style.css?v=1.2.4">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#EFF6FF',
+              100: '#DBEAFE',
+              500: '#3B82F6',
+              600: '#2563EB',
+              700: '#1D4ED8',
+            },
+            navy: {
+              900: '#0F172A',
+              800: '#1E293B',
+              700: '#334155'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @media (max-width: 1279px) {
+      #workspace-info-pane {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans">
+
+  <!-- ================= TOP HEADER BAR ================= -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 transition-colors">
+    <div class="px-3 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4">
+      
+      <!-- Left: Mobile Menu Toggle & Logo -->
+      <div class="flex items-center space-x-2 sm:space-x-3 shrink-0 whitespace-nowrap">
+        
+        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 shrink-0">
+          <i data-lucide="phone-call" class="w-5 h-5"></i>
+        </div>
+        <div class="shrink-0">
+          <div class="flex items-center space-x-1.5 sm:space-x-2">
+            <span class="font-extrabold text-base sm:text-lg text-slate-900 tracking-tight whitespace-nowrap">TeleCall<span class="text-blue-600"> CRM</span></span>
+            <span class="hidden sm:inline-block text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">SAAS ADMIN</span>
+          </div>
+          <p id="header-company-name" class="hidden sm:block text-xs text-slate-500 font-medium whitespace-nowrap">Apex Realty Global</p>
+        </div>
+      </div>
+
+      <!-- Right: Action Buttons & User Chip -->
+      <div class="flex items-center space-x-1.5 sm:space-x-2.5 shrink-0 whitespace-nowrap">
+        
+        <!-- Upload Excel Button (Desktop Only - on Mobile it is in Quick Actions & Menu) -->
+        <button 
+          onclick="openBulkUploadModal()" 
+          class="hidden md:flex btn-primary-glow items-center space-x-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold cursor-pointer"
+          title="Upload Excel or CSV Leads"
+        >
+          <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">Upload Excel</span>
+        </button>
+
+        <!-- Dark Mode Toggle -->
+        <button 
+          onclick="toggleDarkMode()" 
+          class="p-2 rounded-full border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 transition"
+          title="Toggle Light / Dark Theme"
+        >
+          <i id="theme-icon" data-lucide="moon" class="w-4 h-4"></i>
+        </button>
+
+        <!-- Super Admin Master Oversight Pill -->
+        <div id="superadmin-oversight-pill-container"></div>
+
+        <!-- Telephony Status Pill (Desktop Only) -->
+        <div class="hidden lg:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="telephony-pill-text">Connected</span>
+        </div>
+
+        <!-- In-App Notification Bell -->
+        <div class="relative">
+          <button 
+            onclick="toggleNotifDropdown()" 
+            class="p-2 rounded-full border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 relative transition"
+            title="In-App Notifications"
+          >
+            <i data-lucide="bell" class="w-4 h-4"></i>
+            <span id="nav-notif-badge" class="hidden absolute -top-1 -right-1 px-1.5 py-0.2 bg-rose-500 text-white text-[10px] font-bold rounded-full">0</span>
+          </button>
+
+          <!-- Notification Dropdown -->
+          <div id="notif-dropdown-menu" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-200 z-50 overflow-hidden">
+            <div class="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+              <span class="font-bold text-xs text-slate-900">Notifications</span>
+              <button onclick="requestBrowserPushPermission()" class="text-[10px] text-blue-600 hover:underline">Enable Push</button>
+            </div>
+            <div id="notif-list-container" class="max-h-72 overflow-y-auto divide-y divide-slate-100 p-2 text-xs">
+              <div class="p-4 text-center text-slate-400">No new notifications</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="h-6 w-px bg-slate-200 shrink-0"></div>
+
+        <!-- Logged-in User Chip (Tap opens Menu on mobile) -->
+        <div onclick="if(window.innerWidth < 1024) toggleMobileSidebar();" class="flex items-center space-x-2 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 shrink-0 cursor-pointer lg:cursor-default">
+          <div id="nav-avatar-initials" class="w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center shrink-0">
+            AD
+          </div>
+          <div class="text-left hidden md:block">
+            <div id="nav-user-name" class="text-xs font-bold text-slate-900 leading-tight">Admin User</div>
+            <div class="text-[10px] font-bold text-blue-600 uppercase">ADMIN</div>
+          </div>
+        </div>
+
+        <!-- Log Out Button (Desktop Header Only - on mobile it is in Menu Drawer) -->
+        <button 
+          onclick="handleLogout()" 
+          class="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-full border border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition shrink-0 cursor-pointer shadow-sm"
+          title="Log Out of CRM"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-rose-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          <span>Log Out</span>
+        </button>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN LAYOUT WITH SIDEBAR ================= -->
+  <div class="flex-1 flex overflow-hidden relative">
+
+    <!-- MOBILE BACKDROP OVERLAY -->
+    <div id="mobile-sidebar-backdrop" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-[55] hidden lg:hidden transition-opacity"></div>
+
+    <!-- LEFT SIDEBAR (Dark Navy #0F172A) - Mobile Drawer + Desktop Fixed -->
+    <aside id="sidebar-aside" class="fixed inset-y-0 left-0 z-[60] w-72 bg-navy-900 text-slate-300 flex flex-col justify-between select-none transform -translate-x-full transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:w-64 lg:z-auto shrink-0 shadow-2xl lg:shadow-none">
+      
+      <!-- Sidebar Menu -->
+      <div class="p-4 overflow-y-auto">
+        <div class="flex items-center justify-between px-3 mb-3">
+          <span class="text-[11px] font-bold tracking-wider text-slate-400 uppercase">MENU</span>
+          <button onclick="toggleMobileSidebar()" class="lg:hidden p-1 text-slate-400 hover:text-white rounded-lg focus:outline-none cursor-pointer">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+        
+        <nav class="space-y-1.5 text-sm font-medium">
+          
+          <!-- Analytics / Dashboard -->
+          <a href="#analytics" onclick="switchTab('analytics')" id="nav-tab-analytics" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition bg-blue-600 text-white font-semibold shadow-sm">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+              <span>Analytics</span>
+            </div>
+          </a>
+
+          <!-- Shared Inbox / Call Workspace (3-Column Layout) -->
+          <a href="#workspace" onclick="switchTab('workspace')" id="nav-tab-workspace" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition hover:bg-navy-800 text-slate-300">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="inbox" class="w-4 h-4"></i>
+              <span>Shared Inbox</span>
+            </div>
+            <span id="badge-leads-count" class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-navy-800 text-slate-300">0</span>
+          </a>
+
+          <!-- Contacts Book / Leads Catalog -->
+          <a href="#contacts" onclick="switchTab('contacts')" id="nav-tab-contacts" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition hover:bg-navy-800 text-slate-300">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="contact" class="w-4 h-4"></i>
+              <span>Contacts Book</span>
+            </div>
+            <span id="badge-contacts-count" class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-navy-800 text-slate-300">0</span>
+          </a>
+
+          <!-- Allocations -->
+          <a href="#allocations" onclick="switchTab('allocations')" id="nav-tab-allocations" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition hover:bg-navy-800 text-slate-300">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="user-check" class="w-4 h-4"></i>
+              <span>Allocations</span>
+            </div>
+          </a>
+
+          <!-- Follow-ups -->
+          <a href="#followups" onclick="switchTab('followups')" id="nav-tab-followups" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition hover:bg-navy-800 text-slate-300">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="calendar-clock" class="w-4 h-4"></i>
+              <span>Follow-ups</span>
+            </div>
+            <span id="badge-followup-count" class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-500/20 text-amber-300">0</span>
+          </a>
+
+          <!-- Dedicated Dialer Tab -->
+          <a href="#dialer" onclick="switchTab('dialer')" id="nav-tab-dialer" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition hover:bg-navy-800 text-slate-300">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="phone" class="w-4 h-4"></i>
+              <span>Dialer</span>
+            </div>
+            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-500/20 text-blue-300">AUTO</span>
+          </a>
+
+          <!-- Live Agent Wall -->
+          <a href="#live" onclick="switchTab('live')" id="nav-tab-live" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition hover:bg-navy-800 text-slate-300">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="activity" class="w-4 h-4"></i>
+              <span>Live Agents</span>
+            </div>
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          </a>
+
+          <!-- Employees & Team -->
+          <a href="#employees" onclick="switchTab('employees')" id="nav-tab-employees" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition hover:bg-navy-800 text-slate-300">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="user-cog" class="w-4 h-4"></i>
+              <span>Employees</span>
+            </div>
+            <span id="badge-agent-count" class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-navy-800 text-slate-300">0</span>
+          </a>
+
+          <!-- Reports & Export -->
+          <a href="#reports" onclick="switchTab('reports')" id="nav-tab-reports" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition hover:bg-navy-800 text-slate-300">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+              <span>Reports & Export</span>
+            </div>
+          </a>
+
+          <!-- Import History -->
+          <a href="#imports" onclick="switchTab('imports')" id="nav-tab-imports" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition hover:bg-navy-800 text-slate-300">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="history" class="w-4 h-4"></i>
+              <span>Import History</span>
+            </div>
+          </a>
+
+          <!-- Telephony & Settings -->
+          <a href="#telephony" onclick="switchTab('telephony')" id="nav-tab-telephony" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition hover:bg-navy-800 text-slate-300">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="settings" class="w-4 h-4"></i>
+              <span>Telephony Settings</span>
+            </div>
+          </a>
+
+        </nav>
+      </div>
+
+      <!-- Bottom: Version & Sidebar Logout -->
+      <div class="p-3 pb-20 lg:pb-3 border-t border-navy-800 space-y-2 shrink-0">
+        <div class="flex items-center justify-between text-[11px] text-slate-400">
+          <span class="font-mono">Version 1.0.0</span>
+          <a href="javascript:void(0)" onclick="alert('TeleCall CRM Help & Documentation Center')" class="flex items-center space-x-1 text-slate-300 hover:text-white transition">
+            <i data-lucide="help-circle" class="w-3.5 h-3.5"></i>
+            <span>Help Center</span>
+          </a>
+        </div>
+        <button 
+          onclick="handleLogout()" 
+          class="w-full flex items-center justify-center space-x-2 px-3 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 hover:text-rose-100 text-xs font-semibold transition cursor-pointer"
+          title="Log Out of CRM"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          <span>Log Out</span>
+        </button>
+      </div>
+
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 w-full min-w-0 overflow-y-auto p-3 sm:p-6 pb-20 lg:pb-6 bg-slate-50 transition-colors">
+      
+      <!-- ================= TAB 1: ANALYTICS / DASHBOARD (Matching Screenshot 3) ================= -->
+      <section id="content-analytics" class="space-y-6">
+        
+        <!-- Native Mobile Header Greeting (Mobile Only) -->
+        <div class="lg:hidden flex items-center justify-between p-3.5 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl text-white shadow-md shadow-blue-500/20">
+          <div>
+            <span class="text-[11px] text-blue-100 font-medium">Welcome back 👋</span>
+            <h2 id="mobile-greeting-name" class="text-base font-extrabold tracking-tight leading-tight">Admin Portal</h2>
+          </div>
+          <div class="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm border border-white/20 text-[11px] font-bold">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>Live CRM</span>
+          </div>
+        </div>
+
+        <!-- Top Row: 4 Stat Cards (2x2 Grid on Mobile, 4 Cols on Desktop) -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-5">
+          
+          <!-- Card 1: Total Calls -->
+          <div class="bg-white rounded-2xl p-3 sm:p-5 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+              <span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Total Calls</span>
+              <div class="w-7 h-7 sm:w-11 sm:h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <i data-lucide="phone-outgoing" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+              </div>
+            </div>
+            <div class="mt-2">
+              <h3 id="stat-total-calls" class="text-xl sm:text-3xl font-black text-slate-900 leading-none">0</h3>
+              <p class="text-[10px] sm:text-xs font-bold text-emerald-600 mt-1.5 flex items-center">
+                <i data-lucide="trending-up" class="w-3 h-3 mr-0.5 shrink-0"></i>
+                <span>+12.4% week</span>
+              </p>
+            </div>
+          </div>
+
+          <!-- Card 2: Connected Rate -->
+          <div class="bg-white rounded-2xl p-3 sm:p-5 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+              <span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Connected</span>
+              <div class="w-7 h-7 sm:w-11 sm:h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <i data-lucide="check-circle" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+              </div>
+            </div>
+            <div class="mt-2">
+              <h3 id="stat-connected-rate" class="text-xl sm:text-3xl font-black text-slate-900 leading-none">0%</h3>
+              <div class="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
+                <div id="stat-connected-bar" class="bg-blue-600 h-1.5 rounded-full transition-all" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Total Leads -->
+          <div class="bg-white rounded-2xl p-3 sm:p-5 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+              <span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Total Leads</span>
+              <div class="w-7 h-7 sm:w-11 sm:h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                <i data-lucide="users" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+              </div>
+            </div>
+            <div class="mt-2">
+              <h3 id="stat-total-leads" class="text-xl sm:text-3xl font-black text-slate-900 leading-none">0</h3>
+              <p class="text-[10px] sm:text-xs text-slate-400 mt-1.5 truncate">Active database</p>
+            </div>
+          </div>
+
+          <!-- Card 4: Converted Leads -->
+          <div class="bg-white rounded-2xl p-3 sm:p-5 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+              <span class="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Converted</span>
+              <div class="w-7 h-7 sm:w-11 sm:h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <i data-lucide="award" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+              </div>
+            </div>
+            <div class="mt-2">
+              <h3 id="stat-converted-leads" class="text-xl sm:text-3xl font-black text-slate-900 leading-none">0</h3>
+              <p id="stat-conversion-pct" class="text-[10px] sm:text-xs font-bold text-blue-600 mt-1.5 truncate">0% conversion</p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Native Mobile Quick Action Hub (4 App Tiles - Mobile Only) -->
+        <div class="grid grid-cols-4 gap-2 lg:hidden">
+          <button onclick="switchTab('dialer')" class="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white border border-slate-200/80 shadow-sm active:scale-95 transition">
+            <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-1">
+              <i data-lucide="phone-call" class="w-4 h-4"></i>
+            </div>
+            <span class="text-[10px] font-bold text-slate-700">Dialer</span>
+          </button>
+          <button onclick="switchTab('workspace')" class="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white border border-slate-200/80 shadow-sm active:scale-95 transition">
+            <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-1">
+              <i data-lucide="inbox" class="w-4 h-4"></i>
+            </div>
+            <span class="text-[10px] font-bold text-slate-700">Inbox</span>
+          </button>
+          <button onclick="switchTab('contacts')" class="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white border border-slate-200/80 shadow-sm active:scale-95 transition">
+            <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-1">
+              <i data-lucide="contact" class="w-4 h-4"></i>
+            </div>
+            <span class="text-[10px] font-bold text-slate-700">Leads</span>
+          </button>
+          <button onclick="openBulkUploadModal()" class="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white border border-slate-200/80 shadow-sm active:scale-95 transition">
+            <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-1">
+              <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+            </div>
+            <span class="text-[10px] font-bold text-slate-700">Import</span>
+          </button>
+        </div>
+
+        <!-- Middle Row: Charts & Distribution -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          <!-- Chart Card: Weekly Call Analytics -->
+          <div class="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h4 class="text-base font-bold text-slate-900">Weekly Call Analytics</h4>
+                <p class="text-xs text-slate-500">Connected vs Not Connected calls over time</p>
+              </div>
+              <select id="weekly-chart-timeframe" onchange="loadWeeklyAnalyticsChart()" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-700">
+                <option value="7">Last 7 Days</option>
+                <option value="14">Last 14 Days</option>
+                <option value="30">Last 30 Days</option>
+              </select>
+            </div>
+
+            <!-- Canvas Container -->
+            <div class="h-64">
+              <canvas id="weeklyCallsChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Distribution Card: Lead Stage Distribution -->
+          <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
+            <div>
+              <h4 class="text-base font-bold text-slate-900 mb-1">Lead Stage Distribution</h4>
+              <p class="text-xs text-slate-500 mb-4">Active leads breakdown across pipeline</p>
+              
+              <div id="lead-stage-progress-container" class="space-y-3.5">
+                <!-- Dynamically populated -->
+                <div class="text-xs text-slate-400 text-center py-6">Loading pipeline distribution...</div>
+              </div>
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+              <span>Updated in real time</span>
+              <button onclick="switchTab('contacts')" class="text-blue-600 font-semibold hover:underline">Manage Stages</button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Bottom Row: Performance Analytics & Agent Leaderboard -->
+        <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h4 class="text-base font-bold text-slate-900">Agent Performance Leaderboard</h4>
+              <p class="text-xs text-slate-500">Today's call outputs, talk time and conversion stats per telecaller</p>
+            </div>
+            <button onclick="downloadPerformanceReport()" class="flex items-center space-x-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              <span>Export CSV</span>
+            </button>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-500 uppercase font-semibold border-y border-slate-200">
+                <tr>
+                  <th class="py-3 px-4">Agent Name</th>
+                  <th class="py-3 px-4">Status</th>
+                  <th class="py-3 px-4 text-center">Calls Made</th>
+                  <th class="py-3 px-4 text-center">Connected</th>
+                  <th class="py-3 px-4 text-center">Total Talk Time</th>
+                  <th class="py-3 px-4 text-center">Avg Talk Time</th>
+                  <th class="py-3 px-4 text-center">Follow-up Rate</th>
+                  <th class="py-3 px-4 text-center">Avg Gap Between Calls</th>
+                </tr>
+              </thead>
+              <tbody id="agent-leaderboard-tbody" class="divide-y divide-slate-100 font-medium text-slate-700">
+                <tr><td colspan="8" class="text-center py-6 text-slate-400">Loading agent performance...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ================= TAB 2: SHARED INBOX / 3-COLUMN WORKSPACE (Matching Screenshot 1) ================= -->
+      <section id="content-workspace" class="hidden h-[calc(100vh-6.5rem)] flex flex-col lg:flex-row gap-4 pb-20 lg:pb-0">
+        
+        <!-- Column 1: Lead List & Filters (Full width on mobile, 340px on Desktop) -->
+        <div id="workspace-list-pane" class="w-full lg:w-80 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col shrink-0 overflow-hidden h-full">
+          
+          <!-- Master Tracking Filter & Actions -->
+          <div class="p-4 border-b border-slate-200 space-y-3">
+            <div>
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Admin Master Tracking Filter</label>
+              <select id="workspace-agent-filter" onchange="filterWorkspaceLeads()" class="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800">
+                <option value="">All Agents / Master View (Track All)</option>
+              </select>
+            </div>
+
+            <div class="flex items-center space-x-2">
+              <button onclick="exportWorkspaceLeads('excel')" class="flex-1 flex items-center justify-center space-x-1 text-xs font-semibold py-1.5 px-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700">
+                <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-emerald-600"></i>
+                <span>Export (Excel/CSV)</span>
+              </button>
+              <button onclick="syncTelephonyStatus()" class="flex items-center justify-center space-x-1 text-xs font-semibold py-1.5 px-3 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                <span>Sync</span>
+              </button>
+            </div>
+
+            <!-- Search Lead Input -->
+            <div class="relative">
+              <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400"></i>
+              <input 
+                type="text" 
+                id="workspace-search-input" 
+                onkeyup="filterWorkspaceLeads()" 
+                placeholder="Search lead name or phone..." 
+                class="w-full text-xs pl-8 pr-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:outline-none focus:border-blue-500"
+              >
+            </div>
+
+            <!-- Filter Pills (All, New, Follow-up, Interested, Callback, Converted) -->
+            <div class="flex items-center space-x-1 overflow-x-auto pb-1 text-[11px]">
+              <button onclick="setWorkspaceStageFilter('')" id="btn-stage-all" class="px-2.5 py-1 rounded-full bg-blue-600 text-white font-bold whitespace-nowrap">All</button>
+              <button onclick="setWorkspaceStageFilter('New')" class="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold whitespace-nowrap">New</button>
+              <button onclick="setWorkspaceStageFilter('Follow-up')" class="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold whitespace-nowrap">Follow-up</button>
+              <button onclick="setWorkspaceStageFilter('Interested')" class="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold whitespace-nowrap">Interested</button>
+              <button onclick="setWorkspaceStageFilter('Callback')" class="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold whitespace-nowrap">Callback</button>
+              <button onclick="setWorkspaceStageFilter('Converted')" class="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold whitespace-nowrap">Converted</button>
+            </div>
+          </div>
+
+          <!-- Lead List Container -->
+          <div id="workspace-leads-list" class="flex-1 overflow-y-auto divide-y divide-slate-100">
+            <div class="p-6 text-center text-slate-400 text-xs">Loading leads...</div>
+          </div>
+
+        </div>
+
+        <!-- Column 2: Selected Lead Timeline, Recordings & Call Form (Full width on mobile when selected) -->
+        <div id="workspace-detail-pane" class="hidden lg:flex flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm flex-col overflow-hidden h-full">
+          
+          <!-- Middle Header with Mobile Back Button -->
+          <div class="p-3 sm:p-4 border-b border-slate-200 flex items-center justify-between">
+            <div class="flex items-center space-x-2 sm:space-x-3 min-w-0">
+              <!-- Mobile Back Button to return to Lead List -->
+              <button onclick="backToWorkspaceList()" class="lg:hidden flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs active:scale-95 transition shrink-0" title="Back to Leads List">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                <span>Leads</span>
+              </button>
+              <div id="wk-selected-avatar" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-sm shrink-0">
+                --
+              </div>
+              <div class="min-w-0">
+                <div class="flex items-center space-x-2">
+                  <h4 id="wk-selected-name" class="font-bold text-slate-900 text-sm truncate">Select a lead</h4>
+                  <span id="wk-selected-agent-badge" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 shrink-0">Unassigned</span>
+                </div>
+                <p id="wk-selected-phone" class="text-xs text-slate-500 font-mono truncate">--</p>
+              </div>
+            </div>
+
+            <!-- Quick Stage Action Buttons -->
+            <div class="flex items-center space-x-2">
+              <button onclick="quickUpdateStage('Converted')" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
+                Mark Converted
+              </button>
+              <button onclick="quickUpdateStage('Callback')" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100">
+                Callback
+              </button>
+              <button onclick="quickUpdateStage('DND / Blocked')" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100">
+                Block / DND
+              </button>
+            </div>
+          </div>
+
+          <!-- Middle Body: Call History Timeline -->
+          <div id="wk-timeline-container" class="flex-1 overflow-y-auto p-5 space-y-4">
+            <div class="text-center py-16 text-slate-400 text-xs">
+              <i data-lucide="phone-incoming" class="w-10 h-10 mx-auto text-slate-300 mb-2"></i>
+              <span>Select a lead from the left list to review call recordings and history.</span>
+            </div>
+          </div>
+
+          <!-- Middle Footer: Call Trigger & Post-Call Disposition Form -->
+          <div class="p-4 border-t border-slate-200 bg-slate-50">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+              
+              <!-- Call Customer Button (In-CRM) -->
+              <div>
+                <button 
+                  type="button"
+                  id="wk-btn-call" 
+                  onclick="return triggerWorkspaceCall(event)" 
+                  class="w-full btn-primary-glow flex items-center justify-center space-x-2 py-2.5 px-4 text-xs font-bold cursor-pointer"
+                >
+                  <i data-lucide="phone" class="w-4 h-4"></i>
+                  <span>Call Customer</span>
+                </button>
+              </div>
+
+              <!-- Quick Disposition -->
+              <div>
+                <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Disposition</label>
+                <select id="wk-disposition-select" class="w-full text-xs font-medium px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-800">
+                  <option value="">Select Call Outcome</option>
+                </select>
+              </div>
+
+              <!-- Quick Notes -->
+              <div>
+                <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Call Notes</label>
+                <input type="text" id="wk-call-notes-input" placeholder="Call summary..." class="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none">
+              </div>
+
+              <!-- Save Log Button -->
+              <div>
+                <button onclick="saveWorkspaceDisposition()" class="w-full text-xs font-bold py-2.5 px-3 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition">
+                  Save Disposition
+                </button>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Column 3: Lead Details & Quick Actions (Desktop Only, strictly hidden on mobile) -->
+        <div id="workspace-info-pane" class="hidden xl:flex w-72 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex-col shrink-0 overflow-y-auto space-y-5 h-full">
+          
+          <!-- Avatar & Contact Info -->
+          <div class="text-center pb-4 border-b border-slate-100">
+            <div id="wk-right-avatar" class="w-16 h-16 rounded-full bg-blue-100 text-blue-700 font-extrabold text-xl mx-auto flex items-center justify-center mb-2">
+              --
+            </div>
+            <h5 id="wk-right-name" class="font-bold text-slate-900 text-sm">--</h5>
+            <p id="wk-right-phone" class="text-xs text-slate-500 font-mono">--</p>
+            <p id="wk-right-city" class="text-xs text-slate-400 mt-0.5">--</p>
+          </div>
+
+          <!-- Assigned Employee Dropdown (Admin control) -->
+          <div>
+            <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5">Assigned Telecaller</label>
+            <select id="wk-right-assign-select" onchange="reassignSelectedLead()" class="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800">
+              <option value="">Unassigned</option>
+            </select>
+          </div>
+
+          <!-- Lead Pipeline Stage -->
+          <div>
+            <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5">Pipeline Stage</label>
+            <select id="wk-right-stage-select" onchange="changeLeadStageFromRightPanel()" class="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800">
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+
+          <!-- Schedule Next Follow-up -->
+          <div>
+            <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5">Next Follow-up Date</label>
+            <input type="datetime-local" id="wk-right-followup-dt" class="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800">
+            <button onclick="scheduleQuickFollowUp()" class="mt-2 w-full text-xs font-bold py-2 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition">
+              Schedule Follow-up
+            </button>
+          </div>
+
+          <!-- Lead Meta Info -->
+          <div class="pt-2 border-t border-slate-100 text-xs space-y-2 text-slate-600">
+            <div class="flex justify-between">
+              <span class="text-slate-400">Total Calls:</span>
+              <span id="wk-right-calls-count" class="font-bold text-slate-900">0</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Source:</span>
+              <span id="wk-right-source" class="font-semibold text-slate-800">Manual</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Created:</span>
+              <span id="wk-right-created" class="text-slate-700 font-mono">--</span>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ================= TAB 3: CONTACTS BOOK / LEADS (Matching Screenshot 2) ================= -->
+      <section id="content-contacts" class="hidden space-y-6">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          
+          <!-- Left Column: Add Single Lead & Bulk Copy-Paste Importer -->
+          <div class="space-y-6">
+            
+            <!-- Card 1: Add Single Contact -->
+            <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+              <div class="flex items-center space-x-2 text-slate-900 font-bold text-sm mb-4">
+                <i data-lucide="user-plus" class="w-4 h-4 text-blue-600"></i>
+                <span>Add Single Contact</span>
+              </div>
+              <form id="form-single-contact" onsubmit="handleCreateSingleLead(event)" class="space-y-3 text-xs">
+                <div>
+                  <label class="block font-semibold text-slate-700 mb-1">Full Name *</label>
+                  <input type="text" id="single-lead-name" required placeholder="e.g. Rahul Sharma" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:outline-none">
+                </div>
+                <div>
+                  <label class="block font-semibold text-slate-700 mb-1">Phone Number *</label>
+                  <input type="text" id="single-lead-phone" required placeholder="e.g. +919876543210" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:outline-none">
+                </div>
+                <div>
+                  <label class="block font-semibold text-slate-700 mb-1">Select Stage / Pipeline</label>
+                  <select id="single-lead-stage" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 font-medium">
+                    <!-- Populated -->
+                  </select>
+                </div>
+                <div>
+                  <label class="block font-semibold text-slate-700 mb-1">City</label>
+                  <input type="text" id="single-lead-city" placeholder="e.g. Mumbai" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:outline-none">
+                </div>
+                <button type="submit" class="w-full btn-primary-glow py-2.5 font-bold text-xs mt-2">
+                  Add Contact
+                </button>
+              </form>
+            </div>
+
+            <!-- Card 2: Bulk Copy & Paste Importer -->
+            <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+              <div class="flex items-center space-x-2 text-slate-900 font-bold text-sm mb-4">
+                <i data-lucide="clipboard-paste" class="w-4 h-4 text-blue-600"></i>
+                <span>Bulk Copy & Paste Importer</span>
+              </div>
+              <div class="space-y-3 text-xs">
+                <div>
+                  <label class="block font-semibold text-slate-700 mb-1">Target Stage</label>
+                  <select id="paste-lead-stage" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 font-medium"></select>
+                </div>
+                <div>
+                  <label class="block font-semibold text-slate-700 mb-1">Paste Data (Name, Phone per line)</label>
+                  <textarea id="paste-leads-text" rows="5" placeholder="Name, Phone (one per line)&#10;Amit Kumar, +919876543211&#10;Sunita Sen, +919876543212" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 font-mono text-[11px] focus:outline-none"></textarea>
+                </div>
+                <button onclick="handlePasteImport()" class="w-full py-2.5 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800 transition">
+                  Import List
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Right Column: Contacts Catalog Table -->
+          <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+            
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h4 class="text-base font-bold text-slate-900">Contacts Catalog</h4>
+                <p class="text-xs text-slate-500">Manage all registered contacts and segments</p>
+              </div>
+
+              <div class="flex items-center space-x-2">
+                <button onclick="openBulkUploadModal()" class="btn-primary-glow flex items-center space-x-1.5 px-3.5 py-1.5 text-xs font-semibold">
+                  <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+                  <span>Upload Excel</span>
+                </button>
+                <button onclick="exportLeads('excel')" class="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold">
+                  <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                  <span>Export</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Search and Filter Bar -->
+            <div class="flex items-center space-x-3">
+              <div class="relative flex-1">
+                <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400"></i>
+                <input 
+                  type="text" 
+                  id="catalog-search-input" 
+                  onkeyup="loadContactsCatalog()" 
+                  placeholder="Search name or phone..." 
+                  class="w-full text-xs pl-8 pr-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:outline-none"
+                >
+              </div>
+              <select id="catalog-stage-filter" onchange="loadContactsCatalog()" class="text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800">
+                <option value="">All Segments / Stages</option>
+              </select>
+            </div>
+
+            <!-- Contacts Table -->
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-500 uppercase font-semibold border-y border-slate-200">
+                  <tr>
+                    <th class="py-3 px-4">Name</th>
+                    <th class="py-3 px-4">Phone</th>
+                    <th class="py-3 px-4">Stage</th>
+                    <th class="py-3 px-4">Assigned To</th>
+                    <th class="py-3 px-4 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="contacts-catalog-tbody" class="divide-y divide-slate-100 font-medium text-slate-700">
+                  <tr><td colspan="5" class="text-center py-6 text-slate-400">Loading contacts catalog...</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ================= TAB 4: ALLOCATIONS ================= -->
+      <section id="content-allocations" class="hidden space-y-6">
+        <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-6">
+          <div>
+            <h4 class="text-base font-bold text-slate-900">Lead Allocation Engine</h4>
+            <p class="text-xs text-slate-500">Distribute unassigned leads across your telecalling team</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <!-- Quick Split Mode -->
+            <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
+              <h5 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Equal Split (Round-Robin)</h5>
+              <p class="text-xs text-slate-500">Distributes all currently unassigned leads equally among selected active telecallers.</p>
+              <div id="allocation-agents-checklist" class="space-y-1.5 max-h-40 overflow-y-auto text-xs">
+                <!-- Checkboxes -->
+              </div>
+              <button onclick="handleEqualSplitAllocation()" class="w-full btn-primary-glow py-2 text-xs font-bold">
+                Run Equal Split
+              </button>
+            </div>
+
+            <!-- Single Reassignment -->
+            <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
+              <h5 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Transfer All Leads</h5>
+              <p class="text-xs text-slate-500">Transfer all assigned leads from one telecaller to another with audit reason.</p>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-600 mb-1">From Agent</label>
+                <select id="transfer-from-agent" class="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 bg-white"></select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-600 mb-1">To Agent</label>
+                <select id="transfer-to-agent" class="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 bg-white"></select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Transfer Reason *</label>
+                <input type="text" id="transfer-reason-input" placeholder="e.g. Shift change" class="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 bg-white">
+              </div>
+              <button onclick="handleBulkTransferLeads()" class="w-full py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition">
+                Transfer Leads
+              </button>
+            </div>
+
+            <!-- Allocation Summary -->
+            <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 flex flex-col justify-between">
+              <div>
+                <h5 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">Team Capacity</h5>
+                <div id="allocation-capacity-list" class="space-y-2 text-xs">
+                  <!-- Dynamically populated -->
+                </div>
+              </div>
+              <div class="pt-4 border-t border-slate-200 text-xs text-slate-500">
+                All allocations are logged with strict audit trails.
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 5: FOLLOW-UPS ================= -->
+      <section id="content-followups" class="hidden space-y-6">
+        <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h4 class="text-base font-bold text-slate-900">Follow-up Calendar & Schedule</h4>
+              <p class="text-xs text-slate-500">Scheduled customer callbacks and reminders</p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button onclick="filterFollowUps('today')" id="fup-btn-today" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold">Today</button>
+              <button onclick="filterFollowUps('tomorrow')" id="fup-btn-tomorrow" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold">Tomorrow</button>
+              <button onclick="filterFollowUps('overdue')" id="fup-btn-overdue" class="px-3 py-1.5 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 text-xs font-semibold">Overdue</button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-500 uppercase font-semibold border-y border-slate-200">
+                <tr>
+                  <th class="py-3 px-4">Lead Name</th>
+                  <th class="py-3 px-4">Phone</th>
+                  <th class="py-3 px-4">Assigned Agent</th>
+                  <th class="py-3 px-4">Scheduled For</th>
+                  <th class="py-3 px-4">Notes</th>
+                  <th class="py-3 px-4 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody id="followups-tbody" class="divide-y divide-slate-100 font-medium text-slate-700">
+                <tr><td colspan="6" class="text-center py-6 text-slate-400">Loading follow-ups...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 6: DEDICATED DIALER PAGE ================= -->
+      <section id="content-dialer" class="hidden space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          
+          <!-- Keypad & Dial Card -->
+          <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col items-center">
+            <h4 class="text-base font-bold text-slate-900 mb-1">Phone Keypad</h4>
+            <p class="text-xs text-slate-400 mb-4">Manual dialing & quick call</p>
+
+            <!-- Number Display -->
+            <div class="w-full mb-4">
+              <input 
+                type="tel" 
+                id="dialer-phone-input" 
+                oninput="syncAdminKeypadHref()"
+                placeholder="Enter 10-digit number" 
+                class="w-full text-center text-xl font-mono font-bold tracking-wider py-3 px-4 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:outline-none"
+              >
+            </div>
+
+            <!-- 12-Button Keypad Grid -->
+            <div class="grid grid-cols-3 gap-3 w-full max-w-[260px] mb-4">
+              <button onclick="pressDialerKey('1')" class="h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-lg flex flex-col items-center justify-center transition">1</button>
+              <button onclick="pressDialerKey('2')" class="h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-lg flex flex-col items-center justify-center transition">2<span class="text-[9px] text-slate-400 font-normal">ABC</span></button>
+              <button onclick="pressDialerKey('3')" class="h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-lg flex flex-col items-center justify-center transition">3<span class="text-[9px] text-slate-400 font-normal">DEF</span></button>
+              <button onclick="pressDialerKey('4')" class="h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-lg flex flex-col items-center justify-center transition">4<span class="text-[9px] text-slate-400 font-normal">GHI</span></button>
+              <button onclick="pressDialerKey('5')" class="h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-lg flex flex-col items-center justify-center transition">5<span class="text-[9px] text-slate-400 font-normal">JKL</span></button>
+              <button onclick="pressDialerKey('6')" class="h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-lg flex flex-col items-center justify-center transition">6<span class="text-[9px] text-slate-400 font-normal">MNO</span></button>
+              <button onclick="pressDialerKey('7')" class="h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-lg flex flex-col items-center justify-center transition">7<span class="text-[9px] text-slate-400 font-normal">PQRS</span></button>
+              <button onclick="pressDialerKey('8')" class="h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-lg flex flex-col items-center justify-center transition">8<span class="text-[9px] text-slate-400 font-normal">TUV</span></button>
+              <button onclick="pressDialerKey('9')" class="h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-lg flex flex-col items-center justify-center transition">9<span class="text-[9px] text-slate-400 font-normal">WXYZ</span></button>
+              <button onclick="pressDialerKey('*')" class="h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-lg flex items-center justify-center transition">*</button>
+              <button onclick="pressDialerKey('0')" class="h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-lg flex flex-col items-center justify-center transition">0<span class="text-[9px] text-slate-400 font-normal">+</span></button>
+              <button onclick="pressDialerKey('#')" class="h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-lg flex items-center justify-center transition">#</button>
+            </div>
+
+            <!-- Call & Clear Buttons -->
+            <div class="flex items-center space-x-3 w-full max-w-[260px]">
+              <button onclick="clearDialerInput()" class="p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 transition">
+                <i data-lucide="delete" class="w-5 h-5"></i>
+              </button>
+              <button type="button" id="admin-keypad-call-btn" onclick="return handleKeypadCall(event)" class="flex-1 btn-primary-glow py-3 font-bold text-sm flex items-center justify-center space-x-2 cursor-pointer">
+                <i data-lucide="phone" class="w-5 h-5"></i>
+                <span>Call Now (In-CRM)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Auto-Dialer Campaign Runner -->
+          <div class="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-5">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div>
+                <h4 class="text-base font-bold text-slate-900">Auto-Dialer Engine</h4>
+                <p class="text-xs text-slate-500">Preview & Progressive automatic dialer campaign runner</p>
+              </div>
+              <span id="autodialer-status-pill" class="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-600">Idle</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">Mode</label>
+                <select id="ad-mode-select" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 font-medium">
+                  <option value="preview">Preview Mode (Manual confirm)</option>
+                  <option value="progressive">Progressive Mode (Auto-dial on countdown)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">Target Lead Stage</label>
+                <select id="ad-stage-select" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 font-medium"></select>
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">Countdown Delay (sec)</label>
+                <input type="number" id="ad-countdown-input" value="8" min="3" max="30" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 font-mono">
+              </div>
+            </div>
+
+            <!-- Campaign Controls -->
+            <div class="flex items-center space-x-3 pt-2">
+              <button onclick="startAutoDialerCampaign()" id="btn-ad-start" class="btn-primary-glow px-5 py-2.5 text-xs font-bold flex items-center space-x-2">
+                <i data-lucide="play" class="w-4 h-4"></i>
+                <span>Start Campaign</span>
+              </button>
+              <button onclick="pauseAutoDialer()" id="btn-ad-pause" class="hidden px-4 py-2.5 rounded-xl border border-amber-200 bg-amber-50 text-amber-700 text-xs font-bold">
+                Pause
+              </button>
+              <button onclick="skipAutoDialerLead()" id="btn-ad-skip" class="hidden px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 text-xs font-bold">
+                Skip Lead
+              </button>
+              <button onclick="stopAutoDialer()" id="btn-ad-stop" class="hidden px-4 py-2.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-bold">
+                Stop
+              </button>
+            </div>
+
+            <!-- Upcoming Queue Display -->
+            <div id="ad-queue-container" class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+              <div class="flex justify-between text-slate-500 font-semibold">
+                <span>Queue Progress:</span>
+                <span id="ad-progress-text">0 / 0 Leads</span>
+              </div>
+              <div class="w-full bg-slate-200 rounded-full h-2">
+                <div id="ad-progress-bar" class="bg-blue-600 h-2 rounded-full transition-all" style="width: 0%"></div>
+              </div>
+              <p id="ad-current-lead-display" class="text-slate-600 font-medium pt-1">No active auto-dialer session.</p>
+            </div>
+
+            <!-- Admin Dialer Settings -->
+            <div class="pt-4 border-t border-slate-100">
+              <h5 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3">Admin Dialer Configuration</h5>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                <div class="flex items-center space-x-2">
+                  <input type="checkbox" id="cfg-allow-manual" class="rounded text-blue-600">
+                  <label for="cfg-allow-manual" class="font-semibold text-slate-700">Allow Manual Keypad Dialing</label>
+                </div>
+                <div>
+                  <label class="block font-semibold text-slate-600 mb-1">Working Hours Start</label>
+                  <input type="time" id="cfg-working-start" value="09:00" class="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50">
+                </div>
+                <div>
+                  <label class="block font-semibold text-slate-600 mb-1">Working Hours End</label>
+                  <input type="time" id="cfg-working-end" value="19:00" class="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50">
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ================= TAB 7: LIVE AGENTS WALL ================= -->
+      <section id="content-live" class="hidden space-y-6">
+        <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-5">
+          <div class="flex items-center justify-between">
+            <div>
+              <h4 class="text-base font-bold text-slate-900">Real-Time Live Agent Monitor</h4>
+              <p class="text-xs text-slate-500">Live operational wallboard showing telecaller active statuses and durations</p>
+            </div>
+            <div class="flex items-center space-x-2 text-xs font-semibold">
+              <span class="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">On Call: <b id="live-count-oncall">0</b></span>
+              <span class="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">Idle: <b id="live-count-idle">0</b></span>
+              <span class="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Break: <b id="live-count-break">0</b></span>
+              <span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">Offline: <b id="live-count-offline">0</b></span>
+            </div>
+          </div>
+
+          <!-- Agents Card Grid -->
+          <div id="live-agents-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="p-6 text-center text-slate-400 text-xs col-span-full">Loading live agent monitor...</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 8: EMPLOYEES & TEAM ================= -->
+      <section id="content-employees" class="hidden space-y-6">
+        <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h4 class="text-base font-bold text-slate-900">Employee Management</h4>
+              <p class="text-xs text-slate-500">Manage telecallers, managers and access privileges</p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button onclick="openAddEmployeeModal()" class="btn-primary-glow flex items-center space-x-1.5 px-3.5 py-1.5 text-xs font-semibold">
+                <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+                <span>Add Employee</span>
+              </button>
+              <button onclick="openEmployeeBulkUploadModal()" class="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full border border-blue-200 bg-blue-50 text-blue-700 text-xs font-semibold hover:bg-blue-100">
+                <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+                <span>Bulk Add via Excel</span>
+              </button>
+              <button onclick="exportEmployees('excel')" class="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full border border-slate-200 bg-slate-50 text-slate-700 text-xs font-semibold hover:bg-slate-100">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>Export</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Employees Table -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-500 uppercase font-semibold border-y border-slate-200">
+                <tr>
+                  <th class="py-3 px-4">Employee</th>
+                  <th class="py-3 px-4">Role</th>
+                  <th class="py-3 px-4">Live Status</th>
+                  <th class="py-3 px-4 text-center">Assigned Leads</th>
+                  <th class="py-3 px-4 text-center">Today's Calls</th>
+                  <th class="py-3 px-4 text-center">Active</th>
+                  <th class="py-3 px-4 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="employees-tbody" class="divide-y divide-slate-100 font-medium text-slate-700">
+                <tr><td colspan="7" class="text-center py-6 text-slate-400">Loading employees...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 9: REPORTS & EXPORT ================= -->
+      <section id="content-reports" class="hidden space-y-6">
+        <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h4 class="text-base font-bold text-slate-900">Customizable Call Reports</h4>
+              <p class="text-xs text-slate-500">Filter, listen to call recordings, and export datasets to CSV or formatted Excel</p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button onclick="exportCallReports('excel')" class="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100">
+                <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+                <span>Export Excel (.xlsx)</span>
+              </button>
+              <button onclick="exportCallReports('csv')" class="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full border border-slate-200 bg-slate-50 text-slate-700 text-xs font-semibold hover:bg-slate-100">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>Export CSV</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Report Filters -->
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+            <div>
+              <label class="block font-semibold text-slate-600 mb-1">Start Date</label>
+              <input type="date" id="rep-start-date" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-600 mb-1">End Date</label>
+              <input type="date" id="rep-end-date" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-600 mb-1">Telecaller</label>
+              <select id="rep-agent-select" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50">
+                <option value="">All Telecallers</option>
+              </select>
+            </div>
+            <div class="flex items-end">
+              <button onclick="loadCallReportsTable()" class="w-full btn-primary-glow py-2 text-xs font-bold">
+                Apply Filters
+              </button>
+            </div>
+          </div>
+
+          <!-- Call Logs Table with Audio Player -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-500 uppercase font-semibold border-y border-slate-200">
+                <tr>
+                  <th class="py-3 px-4">Date / Time</th>
+                  <th class="py-3 px-4">Customer Name</th>
+                  <th class="py-3 px-4">Phone</th>
+                  <th class="py-3 px-4">Telecaller</th>
+                  <th class="py-3 px-4">Duration</th>
+                  <th class="py-3 px-4">Disposition</th>
+                  <th class="py-3 px-4">Recording</th>
+                </tr>
+              </thead>
+              <tbody id="call-reports-tbody" class="divide-y divide-slate-100 font-medium text-slate-700">
+                <tr><td colspan="7" class="text-center py-6 text-slate-400">Loading call reports...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 10: IMPORT HISTORY ================= -->
+      <section id="content-imports" class="hidden space-y-6">
+        <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-5">
+          <div class="flex items-center justify-between">
+            <div>
+              <h4 class="text-base font-bold text-slate-900">Bulk Upload History</h4>
+              <p class="text-xs text-slate-500">Audit logs of all past Excel / CSV imports with error downloads & undo capability</p>
+            </div>
+            <button onclick="openBulkUploadModal()" class="btn-primary-glow flex items-center space-x-1.5 px-3.5 py-1.5 text-xs font-semibold">
+              <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+              <span>New Bulk Upload</span>
+            </button>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-500 uppercase font-semibold border-y border-slate-200">
+                <tr>
+                  <th class="py-3 px-4">Date / Time</th>
+                  <th class="py-3 px-4">Batch Name</th>
+                  <th class="py-3 px-4">File Name</th>
+                  <th class="py-3 px-4">Uploaded By</th>
+                  <th class="py-3 px-4 text-center">Total Rows</th>
+                  <th class="py-3 px-4 text-center">Imported</th>
+                  <th class="py-3 px-4 text-center">Duplicates</th>
+                  <th class="py-3 px-4 text-center">Failed</th>
+                  <th class="py-3 px-4 text-center">Status</th>
+                  <th class="py-3 px-4 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="import-history-tbody" class="divide-y divide-slate-100 font-medium text-slate-700">
+                <tr><td colspan="10" class="text-center py-6 text-slate-400">Loading import history...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB 11: TELEPHONY & SETTINGS ================= -->
+      <section id="content-telephony" class="hidden space-y-6">
+        <!-- Admin-Only Call Disposition Options Manager -->
+        <div class="max-w-4xl bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-5">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <h4 class="text-base font-bold text-slate-900">Call Outcome / Disposition Options</h4>
+              <p class="text-xs text-slate-500">Only Admin can add, edit, or remove call disposition options shown to all agents &amp; admins.</p>
+            </div>
+            <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-[11px] font-bold self-start">
+              Admin Only
+            </span>
+          </div>
+
+          <form onsubmit="handleAdminCreateDisposition(event)" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 text-xs">
+            <input
+              type="text"
+              id="admin-new-dispo-label"
+              required
+              placeholder="Enter new disposition option (e.g. Interested, Wrong Number, Site Visit)"
+              class="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white"
+            >
+            <button type="submit" class="btn-primary-glow px-5 py-2.5 font-bold text-xs whitespace-nowrap cursor-pointer">
+              + Add Option
+            </button>
+          </form>
+
+          <div id="admin-dispositions-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="col-span-full text-center py-4 text-xs text-slate-400">Loading disposition options...</div>
+          </div>
+        </div>
+
+        <div class="max-w-4xl bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-6">
+          <div>
+            <h4 class="text-base font-bold text-slate-900">Telephony Provider Configuration</h4>
+            <p class="text-xs text-slate-500">Configure telephony provider APIs (Exotel, Twilio, Ozonetel, Knowlarity, MyOperator, or Mock Provider)</p>
+          </div>
+
+          <form id="form-telephony-config" onsubmit="handleSaveTelephonyConfig(event)" class="space-y-4 text-xs">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">Provider *</label>
+                <select id="tele-provider" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 font-bold text-slate-900">
+                  <option value="mock">Built-in Mock Provider (Offline testing)</option>
+                  <option value="exotel">Exotel</option>
+                  <option value="twilio">Twilio</option>
+                  <option value="ozonetel">Ozonetel</option>
+                  <option value="knowlarity">Knowlarity</option>
+                  <option value="myoperator">MyOperator</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">Virtual Number / Caller ID *</label>
+                <input type="text" id="tele-virtual-num" placeholder="e.g. +918000998877" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800">
+              </div>
+
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">API Key / Account SID</label>
+                <input type="text" id="tele-api-key" placeholder="Provider API Key" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800">
+              </div>
+
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">API Token / Secret</label>
+                <input type="password" id="tele-api-token" placeholder="Provider API Token" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800">
+              </div>
+
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">Recording Retention Period (Days)</label>
+                <input type="number" id="tele-retention" value="90" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800">
+              </div>
+
+              <div class="flex items-center space-x-2 pt-6">
+                <input type="checkbox" id="tele-consent-chk" class="rounded text-blue-600">
+                <label for="tele-consent-chk" class="font-semibold text-slate-700">Play Call Recording Consent Announcement</label>
+              </div>
+            </div>
+
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Consent Announcement Text</label>
+              <textarea id="tele-consent-text" rows="2" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800">This call is recorded for quality, regulatory compliance and employee tracking purposes.</textarea>
+            </div>
+
+            <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
+              <span id="tele-save-status" class="text-xs font-semibold text-emerald-600"></span>
+              <button type="submit" class="btn-primary-glow px-6 py-2.5 font-bold text-xs">
+                Save Telephony Settings
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ================= FLOATING DIALER BUTTON (Desktop Only) ================= -->
+  <div onclick="openFloatingDialer()" class="hidden lg:flex floating-dialer-btn" title="Open Floating Quick Dialer">
+    <i data-lucide="phone" class="w-6 h-6"></i>
+  </div>
+
+  <!-- ================= FLOATING DIALER MODAL ================= -->
+  <div id="floating-dialer-modal" class="hidden fixed bottom-24 right-6 z-50 w-80 bg-white rounded-3xl shadow-2xl border border-slate-200 p-5 space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <div class="flex items-center space-x-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span class="font-bold text-xs text-slate-900">Quick Dialer</span>
+      </div>
+      <button onclick="closeFloatingDialer()" class="p-1 rounded-full text-slate-400 hover:text-slate-600">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Number Display -->
+    <input type="tel" id="float-dial-number" oninput="syncAdminFloatHref()" placeholder="Enter customer phone" class="w-full text-center font-mono font-bold text-base py-2 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none">
+
+    <!-- Mini Keypad -->
+    <div class="grid grid-cols-3 gap-2">
+      <button onclick="floatKey('1')" class="py-2 rounded-lg bg-slate-100 text-slate-800 font-bold hover:bg-slate-200">1</button>
+      <button onclick="floatKey('2')" class="py-2 rounded-lg bg-slate-100 text-slate-800 font-bold hover:bg-slate-200">2</button>
+      <button onclick="floatKey('3')" class="py-2 rounded-lg bg-slate-100 text-slate-800 font-bold hover:bg-slate-200">3</button>
+      <button onclick="floatKey('4')" class="py-2 rounded-lg bg-slate-100 text-slate-800 font-bold hover:bg-slate-200">4</button>
+      <button onclick="floatKey('5')" class="py-2 rounded-lg bg-slate-100 text-slate-800 font-bold hover:bg-slate-200">5</button>
+      <button onclick="floatKey('6')" class="py-2 rounded-lg bg-slate-100 text-slate-800 font-bold hover:bg-slate-200">6</button>
+      <button onclick="floatKey('7')" class="py-2 rounded-lg bg-slate-100 text-slate-800 font-bold hover:bg-slate-200">7</button>
+      <button onclick="floatKey('8')" class="py-2 rounded-lg bg-slate-100 text-slate-800 font-bold hover:bg-slate-200">8</button>
+      <button onclick="floatKey('9')" class="py-2 rounded-lg bg-slate-100 text-slate-800 font-bold hover:bg-slate-200">9</button>
+      <button onclick="floatKey('*')" class="py-2 rounded-lg bg-slate-100 text-slate-800 font-bold hover:bg-slate-200">*</button>
+      <button onclick="floatKey('0')" class="py-2 rounded-lg bg-slate-100 text-slate-800 font-bold hover:bg-slate-200">0</button>
+      <button onclick="floatKey('#')" class="py-2 rounded-lg bg-slate-100 text-slate-800 font-bold hover:bg-slate-200">#</button>
+    </div>
+
+    <div class="flex items-center space-x-2 pt-2">
+      <button onclick="document.getElementById('float-dial-number').value=''" class="p-2.5 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-100">
+        <i data-lucide="delete" class="w-4 h-4"></i>
+      </button>
+      <button type="button" id="admin-float-call-btn" onclick="return handleFloatCall(event)" class="flex-1 btn-primary-glow py-2.5 font-bold text-xs flex items-center justify-center space-x-1.5 cursor-pointer">
+        <i data-lucide="phone" class="w-4 h-4"></i>
+        <span>Dial (In-CRM)</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= 4-STEP BULK UPLOAD MODAL ================= -->
+  <div id="bulk-upload-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+        <div class="flex items-center space-x-3">
+          <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center">
+            <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base text-slate-900">Bulk Upload Leads (Excel / CSV)</h3>
+            <p class="text-xs text-slate-500">4-Step Guided Wizard with Deduplication & Team Split</p>
+          </div>
+        </div>
+        <button onclick="closeBulkUploadModal()" class="p-2 rounded-full text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Step Indicator Bar -->
+      <div class="px-6 py-3 border-b border-slate-100 bg-white grid grid-cols-4 gap-2 text-center text-xs font-bold">
+        <div id="step-pill-1" class="py-1.5 rounded-full bg-blue-600 text-white">1. Upload File</div>
+        <div id="step-pill-2" class="py-1.5 rounded-full bg-slate-100 text-slate-500">2. Map Columns</div>
+        <div id="step-pill-3" class="py-1.5 rounded-full bg-slate-100 text-slate-500">3. Preview & Dedupe</div>
+        <div id="step-pill-4" class="py-1.5 rounded-full bg-slate-100 text-slate-500">4. Assign & Import</div>
+      </div>
+
+      <!-- Modal Body (Dynamic Steps) -->
+      <div class="p-6 overflow-y-auto flex-1">
+        
+        <!-- STEP 1: Upload File -->
+        <div id="upload-step-1" class="space-y-5">
+          <div class="border-2 border-dashed border-slate-300 rounded-3xl p-8 text-center hover:border-blue-500 transition cursor-pointer bg-slate-50" onclick="document.getElementById('excel-file-input').click()">
+            <div class="w-14 h-14 rounded-full bg-blue-100 text-blue-600 mx-auto flex items-center justify-center mb-3">
+              <i data-lucide="upload-cloud" class="w-7 h-7"></i>
+            </div>
+            <h4 class="font-bold text-sm text-slate-900">Click or drag & drop Excel / CSV file here</h4>
+            <p class="text-xs text-slate-500 mt-1">Supports .xlsx, .xls, and .csv (Max 10 MB or 50,000 rows)</p>
+            <input type="file" id="excel-file-input" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleFileSelected(event)">
+          </div>
+
+          <div id="selected-file-info" class="hidden p-3 rounded-xl bg-blue-50 border border-blue-200 text-xs font-semibold text-blue-800 flex items-center justify-between">
+            <span id="selected-filename">filename.xlsx</span>
+            <span id="selected-filesize" class="text-slate-500 font-mono">0 KB</span>
+          </div>
+
+          <div class="flex items-center justify-between text-xs pt-3 border-t border-slate-100">
+            <div class="flex items-center space-x-2">
+              <span class="text-slate-500">Need a sample format?</span>
+              <a href="/api/v1/leads/import/sample-template?format=xlsx" class="text-blue-600 font-bold hover:underline flex items-center">
+                <i data-lucide="download" class="w-3.5 h-3.5 mr-1"></i>
+                <span>Download Sample Template (.xlsx)</span>
+              </a>
+            </div>
+            <button onclick="goToUploadStep(2)" id="btn-to-step-2" disabled class="btn-primary-glow px-6 py-2 text-xs font-bold disabled:opacity-50">
+              Next: Map Columns &rarr;
+            </button>
+          </div>
+        </div>
+
+        <!-- STEP 2: Column Mapping -->
+        <div id="upload-step-2" class="hidden space-y-5">
+          <div>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500">Map File Columns to CRM Lead Fields</h4>
+            <p class="text-xs text-slate-400">Match your Excel headers to corresponding CRM fields. Phone number is mandatory.</p>
+          </div>
+
+          <div class="space-y-3 text-xs" id="column-mapping-container">
+            <!-- Mappings generated dynamically -->
+          </div>
+
+          <div class="flex items-center justify-between pt-4 border-t border-slate-100">
+            <button onclick="goToUploadStep(1)" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50">
+              &larr; Back
+            </button>
+            <button onclick="goToUploadStep(3)" class="btn-primary-glow px-6 py-2 text-xs font-bold">
+              Next: Preview & Validation &rarr;
+            </button>
+          </div>
+        </div>
+
+        <!-- STEP 3: Preview & Validation -->
+        <div id="upload-step-3" class="hidden space-y-5">
+          <!-- Stats Summary Badge Row -->
+          <div class="grid grid-cols-4 gap-3 text-center text-xs">
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <span class="text-slate-400 block text-[10px] uppercase font-bold">Total Rows</span>
+              <span id="preview-stat-total" class="font-extrabold text-slate-900 text-base">0</span>
+            </div>
+            <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700">
+              <span class="block text-[10px] uppercase font-bold">Valid Rows</span>
+              <span id="preview-stat-valid" class="font-extrabold text-base">0</span>
+            </div>
+            <div class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700">
+              <span class="block text-[10px] uppercase font-bold">Duplicates</span>
+              <span id="preview-stat-duplicate" class="font-extrabold text-base">0</span>
+            </div>
+            <div class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700">
+              <span class="block text-[10px] uppercase font-bold">Invalid Rows</span>
+              <span id="preview-stat-invalid" class="font-extrabold text-base">0</span>
+            </div>
+          </div>
+
+          <!-- Duplicate Handling Option Radio -->
+          <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2 text-xs">
+            <label class="block font-bold text-slate-800">Duplicate Phone Handling Strategy:</label>
+            <div class="flex items-center space-x-6">
+              <label class="flex items-center space-x-2 cursor-pointer">
+                <input type="radio" name="dup-rule" value="skip" checked class="text-blue-600">
+                <span class="font-medium text-slate-700">Skip duplicates (Safe default)</span>
+              </label>
+              <label class="flex items-center space-x-2 cursor-pointer">
+                <input type="radio" name="dup-rule" value="update" class="text-blue-600">
+                <span class="font-medium text-slate-700">Update existing lead details</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Preview Table (first 10 rows) -->
+          <div class="overflow-x-auto border border-slate-200 rounded-xl max-h-56">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-500 font-bold uppercase border-b border-slate-200 sticky top-0">
+                <tr id="preview-table-header"></tr>
+              </thead>
+              <tbody id="preview-table-body" class="divide-y divide-slate-100 text-slate-700"></tbody>
+            </table>
+          </div>
+
+          <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+            <button onclick="goToUploadStep(2)" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50">
+              &larr; Back
+            </button>
+            <button onclick="goToUploadStep(4)" class="btn-primary-glow px-6 py-2 text-xs font-bold">
+              Next: Assign & Import &rarr;
+            </button>
+          </div>
+        </div>
+
+        <!-- STEP 4: Assign & Import -->
+        <div id="upload-step-4" class="hidden space-y-5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Batch / Campaign Name *</label>
+              <input type="text" id="import-batch-name" value="Excel Leads Batch" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Default Pipeline Stage</label>
+              <select id="import-default-stage" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 font-medium"></select>
+            </div>
+          </div>
+
+          <!-- Assignment Options -->
+          <div class="space-y-3 text-xs">
+            <label class="block font-bold text-slate-800 uppercase tracking-wider text-[11px]">Lead Allocation Mode</label>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <label class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-start space-x-2.5 cursor-pointer hover:border-blue-500">
+                <input type="radio" name="assign-mode" value="unassigned" checked class="mt-0.5 text-blue-600" onchange="toggleAssignModeInputs()">
+                <div>
+                  <span class="font-bold text-slate-800 block">Leave Unassigned</span>
+                  <span class="text-[10px] text-slate-500">Assign later from Allocations tab.</span>
+                </div>
+              </label>
+
+              <label class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-start space-x-2.5 cursor-pointer hover:border-blue-500">
+                <input type="radio" name="assign-mode" value="single" class="mt-0.5 text-blue-600" onchange="toggleAssignModeInputs()">
+                <div>
+                  <span class="font-bold text-slate-800 block">Single Employee</span>
+                  <span class="text-[10px] text-slate-500">Assign all leads to one telecaller.</span>
+                </div>
+              </label>
+
+              <label class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-start space-x-2.5 cursor-pointer hover:border-blue-500">
+                <input type="radio" name="assign-mode" value="round_robin" class="mt-0.5 text-blue-600" onchange="toggleAssignModeInputs()">
+                <div>
+                  <span class="font-bold text-slate-800 block">Equal Split</span>
+                  <span class="text-[10px] text-slate-500">Split evenly across team.</span>
+                </div>
+              </label>
+            </div>
+
+            <!-- Single Agent Picker (hidden by default) -->
+            <div id="assign-single-picker" class="hidden pt-2">
+              <label class="block font-semibold text-slate-700 mb-1">Select Employee</label>
+              <select id="import-single-agent" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 font-medium"></select>
+            </div>
+
+            <!-- Round Robin Checklist (hidden by default) -->
+            <div id="assign-round-robin-picker" class="hidden pt-2">
+              <label class="block font-semibold text-slate-700 mb-1">Select Team Members for Split</label>
+              <div id="import-team-checklist" class="space-y-1.5 max-h-36 overflow-y-auto p-2 border border-slate-200 rounded-xl bg-slate-50"></div>
+            </div>
+          </div>
+
+          <!-- Live Progress Bar (During execution) -->
+          <div id="import-progress-container" class="hidden space-y-2 pt-2">
+            <div class="flex justify-between text-xs font-semibold text-slate-600">
+              <span>Importing leads in background...</span>
+              <span id="import-progress-pct">0%</span>
+            </div>
+            <div class="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
+              <div id="import-live-bar" class="bg-blue-600 h-3 rounded-full transition-all duration-300" style="width: 15%"></div>
+            </div>
+          </div>
+
+          <!-- Bottom Actions -->
+          <div class="flex items-center justify-between pt-4 border-t border-slate-100">
+            <button onclick="goToUploadStep(3)" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50">
+              &larr; Back
+            </button>
+            <button onclick="executeFinalImport()" id="btn-final-import" class="btn-primary-glow px-8 py-2.5 text-xs font-extrabold flex items-center space-x-2">
+              <i data-lucide="check" class="w-4 h-4"></i>
+              <span>Import Leads</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- SUCCESS SUMMARY VIEW -->
+        <div id="upload-step-success" class="hidden text-center py-6 space-y-4">
+          <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center">
+            <i data-lucide="check-circle" class="w-9 h-9"></i>
+          </div>
+          <h3 class="font-extrabold text-lg text-slate-900">Bulk Import Completed!</h3>
+          <div class="max-w-md mx-auto grid grid-cols-3 gap-3 text-xs">
+            <div class="p-3 rounded-xl bg-emerald-50 text-emerald-800 font-bold border border-emerald-200">
+              <span id="succ-imported" class="text-lg block">0</span> Imported
+            </div>
+            <div class="p-3 rounded-xl bg-amber-50 text-amber-800 font-bold border border-amber-200">
+              <span id="succ-duplicates" class="text-lg block">0</span> Duplicates
+            </div>
+            <div class="p-3 rounded-xl bg-rose-50 text-rose-800 font-bold border border-rose-200">
+              <span id="succ-failed" class="text-lg block">0</span> Failed
+            </div>
+          </div>
+
+          <div class="pt-4 flex items-center justify-center space-x-3 text-xs">
+            <button id="btn-download-error-report" onclick="downloadLastErrorReport()" class="hidden px-4 py-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 font-bold hover:bg-rose-100">
+              Download Error Report (Excel)
+            </button>
+            <button onclick="closeBulkUploadModal(); switchTab('workspace');" class="btn-primary-glow px-6 py-2 font-bold">
+              View Leads in Shared Inbox
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= MOBILE BOTTOM NAVIGATION BAR (True Native App Bar) ================= -->
+  <nav class="lg:hidden fixed bottom-0 inset-x-0 bg-white/95 dark:bg-navy-900/95 backdrop-blur-md border-t border-slate-200/80 dark:border-navy-800 flex items-center justify-around h-16 z-40 px-2 shadow-lg">
+    <button id="mobile-nav-analytics" onclick="switchTab('analytics')" class="flex flex-col items-center justify-center p-1.5 text-xs text-blue-600 font-bold active:scale-90 transition">
+      <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+      <span class="text-[10px] mt-0.5">Stats</span>
+    </button>
+    <button id="mobile-nav-workspace" onclick="switchTab('workspace')" class="flex flex-col items-center justify-center p-1.5 text-xs text-slate-500 hover:text-blue-600 active:scale-90 transition">
+      <i data-lucide="inbox" class="w-5 h-5"></i>
+      <span class="text-[10px] mt-0.5">Inbox</span>
+    </button>
+    <button id="mobile-nav-dialer" onclick="switchTab('dialer')" class="flex flex-col items-center justify-center p-1 active:scale-90 transition -mt-5">
+      <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-xl shadow-blue-500/40 border-4 border-white dark:border-navy-900">
+        <i data-lucide="phone" class="w-5 h-5"></i>
+      </div>
+      <span class="text-[10px] font-bold text-blue-600">Dialer</span>
+    </button>
+    <button id="mobile-nav-contacts" onclick="switchTab('contacts')" class="flex flex-col items-center justify-center p-1.5 text-xs text-slate-500 hover:text-blue-600 active:scale-90 transition">
+      <i data-lucide="contact" class="w-5 h-5"></i>
+      <span class="text-[10px] mt-0.5">Leads</span>
+    </button>
+    <button onclick="toggleMobileSidebar()" class="flex flex-col items-center justify-center p-1.5 text-xs text-slate-500 hover:text-blue-600 active:scale-90 transition">
+      <i data-lucide="menu" class="w-5 h-5"></i>
+      <span class="text-[10px] mt-0.5">Menu</span>
+    </button>
+  </nav>
+
+  <!-- Mandatory Scripts -->
+  <script src="/static/js/app.js?v=1.2.4"></script>
+  <script src="/static/js/admin.js?v=1.2.4"></script>
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>
