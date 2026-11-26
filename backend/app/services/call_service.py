@@ -188,7 +188,8 @@ def submit_call_disposition(
     next_followup_at: Optional[datetime] = None,
     followup_notes: Optional[str] = None,
     followup_priority: str = "normal",
-    update_lead_stage_id: Optional[str] = None
+    update_lead_stage_id: Optional[str] = None,
+    customer_name: Optional[str] = None
 ) -> CallLog:
     call_log = db.query(CallLog).filter(
         CallLog.id == call_log_id,
@@ -226,9 +227,14 @@ def submit_call_disposition(
         shift.total_talk_time_sec = (shift.total_talk_time_sec or 0) + (call_log.talk_time_seconds or 0)
         shift.total_calls_handled = (shift.total_calls_handled or 0) + 1
 
-    # Update Lead Stage if specified or auto-matched
+    # Update Lead Name / Stage if specified or auto-matched
     lead = db.query(Lead).filter(Lead.id == call_log.lead_id).first()
     if lead:
+        clean_cust_name = (customer_name or "").strip()
+        if clean_cust_name:
+            name_parts = clean_cust_name.split(None, 1)
+            lead.first_name = name_parts[0][:100]
+            lead.last_name = name_parts[1][:100] if len(name_parts) > 1 else ""
         if update_lead_stage_id:
             lead.stage_id = update_lead_stage_id
         else:

@@ -265,7 +265,8 @@ def submit_disposition(
         next_followup_at=req.next_followup_at,
         followup_notes=req.followup_notes,
         followup_priority=req.followup_priority or "normal",
-        update_lead_stage_id=req.update_lead_stage_id
+        update_lead_stage_id=req.update_lead_stage_id,
+        customer_name=req.customer_name
     )
     return {
         "status": "success",

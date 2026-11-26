@@ -47,6 +47,7 @@ class SubmitDispositionRequest(BaseModel):
     followup_notes: Optional[str] = None
     followup_priority: Optional[str] = "normal"
     update_lead_stage_id: Optional[str] = None
+    customer_name: Optional[str] = None
 
 class CallLogResponse(BaseModel):
     id: str

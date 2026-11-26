@@ -888,6 +888,10 @@ function stopUnifiedCallTimersAndMic() {
     clearTimeout(window.__crmConnectTimeout);
     window.__crmConnectTimeout = null;
   }
+  if (typeof window.__crmSimReturnCleanup === 'function') {
+    try { window.__crmSimReturnCleanup(); } catch (e) {}
+    window.__crmSimReturnCleanup = null;
+  }
   const st = window.__unifiedCallState;
   if (st.timerInterval) {
     clearInterval(st.timerInterval);
@@ -931,6 +935,9 @@ function openUnifiedCallModal({ leadId = null, leadName = 'Customer', phone = ''
   st.initiatePromise = null;
   st.seconds = 0;
   st.ended = false;
+  st.useSimDialer = useSimDialer;
+  st.simBackgroundedAt = null;
+  st.callConnectedAt = null;
   st.selectedDispoId = null;
   st.selectedDispoCode = '';
   st.selectedDispoLabel = '';
@@ -941,6 +948,9 @@ function openUnifiedCallModal({ leadId = null, leadName = 'Customer', phone = ''
   st.recordingFile = null;
   st.recSeconds = 0;
   st.onSaved = onSaved;
+
+  const isGenericLeadName = !leadName || /^(manual call|customer|unknown|contact(\s+\d+)?)$/i.test(String(leadName).trim());
+  const prefillCustomerName = isGenericLeadName ? '' : safeName;
 
   const modal = document.createElement('div');
   modal.id = 'unified-call-modal';
@@ -964,18 +974,20 @@ function openUnifiedCallModal({ leadId = null, leadName = 'Customer', phone = ''
         </div>
 
         <div>
-          <h3 class="font-extrabold text-base sm:text-lg text-white leading-tight">${safeName}</h3>
+          <h3 id="ucm-header-name" class="font-extrabold text-base sm:text-lg text-white leading-tight">${safeName}</h3>
           <div class="flex items-center flex-wrap gap-2 mt-1">
             <span class="text-xs text-blue-300 font-mono font-bold">${cleanPhone || phone}</span>
             <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold ${useSimDialer ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30' : 'bg-blue-500/20 text-blue-300 border border-blue-400/30'}">${useSimDialer ? '● Phone SIM + CRM' : '● In-CRM Web Call'}</span>
-            ${useSimDialer && cleanPhone ? `<a href="tel:${cleanPhone}" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20">Redial SIM</a>` : ''}
+            ${useSimDialer && cleanPhone ? `<a href="tel:${cleanPhone}" onclick="if(window.__unifiedCallState){window.__unifiedCallState.simBackgroundedAt=Date.now();}" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20">Redial SIM</a>` : ''}
           </div>
         </div>
 
         <div class="flex items-center space-x-2">
           ${useSimDialer && cleanPhone ? `
             <a
+              id="ucm-btn-call-sim"
               href="tel:${cleanPhone}"
+              onclick="if(window.__unifiedCallState){window.__unifiedCallState.simBackgroundedAt=Date.now();}"
               class="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-slate-950 font-extrabold text-xs flex items-center justify-center space-x-1.5 shadow-lg shadow-emerald-500/30 transition cursor-pointer"
             >
               <i data-lucide="phone-call" class="w-4 h-4"></i>
@@ -994,8 +1006,20 @@ function openUnifiedCallModal({ leadId = null, leadName = 'Customer', phone = ''
         </div>
       </div>
 
-      <!-- Scrollable Body: Disposition Grid + Callback + Voice Recording -->
+      <!-- Scrollable Body: Customer Name + Disposition Grid + Callback + Voice Recording -->
       <div class="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1">
+        <!-- Customer / Lead Name Input -->
+        <div>
+          <label class="block text-xs font-bold text-slate-800 mb-1">Customer Name <span class="text-slate-400 font-normal">(Add / Edit)</span></label>
+          <input
+            type="text"
+            id="ucm-customer-name"
+            value="${prefillCustomerName}"
+            oninput="const h=document.getElementById('ucm-header-name'); if(h){h.innerText=this.value.trim()||'${safeName}';}"
+            placeholder="Enter customer name (e.g. Rahul Sharma)"
+            class="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+          >
+        </div>
         <!-- Call Outcome / Disposition Grid -->
         <div>
           <div class="flex items-center justify-between mb-2">
@@ -1120,7 +1144,39 @@ function openUnifiedCallModal({ leadId = null, leadName = 'Customer', phone = ''
 
   // Option 1: Trigger real Android SIM dialer on mobile, or Web Audio ringtone on desktop
   if (useSimDialer) {
+    st.simBackgroundedAt = Date.now();
     triggerPhoneDialer(cleanPhone);
+
+    // Auto-stop call timer when agent cuts Phone SIM call and returns to CRM
+    const onLeaveToDialer = () => {
+      if (document.hidden && !st.ended) {
+        st.simBackgroundedAt = st.simBackgroundedAt || Date.now();
+      }
+    };
+    const onReturnFromDialer = () => {
+      if (document.hidden || st.ended || !st.simBackgroundedAt) return;
+      const awayMs = Date.now() - st.simBackgroundedAt;
+      if (awayMs >= 1500) {
+        if (st.callConnectedAt) {
+          st.seconds = Math.max(st.seconds, Math.floor((Date.now() - st.callConnectedAt) / 1000));
+        } else {
+          st.seconds = Math.max(st.seconds, Math.floor(awayMs / 1000));
+        }
+        const tEl = document.getElementById('ucm-timer');
+        if (tEl) tEl.innerText = formatCallTimer(st.seconds);
+        endUnifiedCall();
+      }
+    };
+    document.addEventListener('visibilitychange', onLeaveToDialer);
+    document.addEventListener('visibilitychange', onReturnFromDialer);
+    window.addEventListener('blur', onLeaveToDialer);
+    window.addEventListener('focus', onReturnFromDialer);
+    window.__crmSimReturnCleanup = () => {
+      document.removeEventListener('visibilitychange', onLeaveToDialer);
+      document.removeEventListener('visibilitychange', onReturnFromDialer);
+      window.removeEventListener('blur', onLeaveToDialer);
+      window.removeEventListener('focus', onReturnFromDialer);
+    };
   } else {
     playCrmRingtone();
   }
@@ -1129,6 +1185,7 @@ function openUnifiedCallModal({ leadId = null, leadName = 'Customer', phone = ''
   window.__crmConnectTimeout = setTimeout(() => {
     stopCrmRingtone();
     if (st.ended) return;
+    st.callConnectedAt = Date.now();
     const dot = document.getElementById('ucm-status-dot');
     const txt = document.getElementById('ucm-status-text');
     if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse';
@@ -1137,9 +1194,10 @@ function openUnifiedCallModal({ leadId = null, leadName = 'Customer', phone = ''
       txt.className = 'text-[11px] font-extrabold uppercase tracking-wider text-emerald-400';
     }
 
-    // Start live call duration timer
+    // Start live call duration timer using real wall-clock elapsed time
     st.timerInterval = setInterval(() => {
-      st.seconds++;
+      if (st.ended) return;
+      st.seconds = Math.max(st.seconds + 1, Math.floor((Date.now() - st.callConnectedAt) / 1000));
       const tEl = document.getElementById('ucm-timer');
       if (tEl) tEl.innerText = formatCallTimer(st.seconds);
     }, 1000);
@@ -1177,15 +1235,22 @@ async function endUnifiedCall() {
   playCrmDisconnectTone();
 
   const st = window.__unifiedCallState;
+  if (st.ended) return;
   st.ended = true;
   if (st.timerInterval) {
     clearInterval(st.timerInterval);
     st.timerInterval = null;
   }
+  if (typeof window.__crmSimReturnCleanup === 'function') {
+    try { window.__crmSimReturnCleanup(); } catch (e) {}
+    window.__crmSimReturnCleanup = null;
+  }
 
   const dot = document.getElementById('ucm-status-dot');
   const txt = document.getElementById('ucm-status-text');
   const btn = document.getElementById('ucm-btn-end-call');
+  const simBtn = document.getElementById('ucm-btn-call-sim');
+  if (simBtn) simBtn.classList.add('hidden');
   if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
   if (txt) {
     txt.innerText = `Call Ended (${formatCallTimer(st.seconds)}) — Select Outcome`;
@@ -1374,12 +1439,16 @@ async function saveUnifiedCallDisposition() {
     const finalNotes = isOther && customOtherText ? customOtherText : (st.selectedDispoLabel || '');
 
     const followupDt = document.getElementById('ucm-followup-dt')?.value;
+    const customerNameVal = document.getElementById('ucm-customer-name')?.value?.trim() || '';
     const dispoPayload = {
       call_log_id: logId,
       call_id: logId,
       disposition_id: st.selectedDispoId,
       notes: finalNotes
     };
+    if (customerNameVal) {
+      dispoPayload.customer_name = customerNameVal;
+    }
     if (followupDt) {
       dispoPayload.next_followup_at = new Date(followupDt).toISOString();
       dispoPayload.followup_notes = `Callback: ${finalNotes}`;
